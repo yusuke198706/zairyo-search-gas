@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>材料検索システム ｜ デモ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+  <style>
+    :root {
+      --primary: #1565c0;
+      --primary-dark: #0d47a1;
+      --primary-light: #e3f2fd;
+      --accent: #ff6f00;
+      --success: #2e7d32;
+      --success-light: #e8f5e9;
+      --danger: #c62828;
+      --danger-light: #ffebee;
+      --bg: #f5f7fa;
+      --surface: #ffffff;
+      --border: #dde3ea;
+      --text: #1a1a2e;
+      --text-sub: #5f6368;
+      --shadow: 0 2px 8px rgba(0,0,0,0.10);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.13);
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      font-size: 15px;
+    }
+    /* ─── ヘッダー ─── */
+    header {
+      background: var(--primary);
+      color: #fff;
+      padding: 0 16px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+    .header-title .material-symbols-outlined { font-size: 22px; }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #69f0ae;
+      box-shadow: 0 0 6px #69f0ae;
+      flex-shrink: 0;
+    }
+    .status-dot.offline { background: #ff7043; box-shadow: 0 0 6px #ff7043; }
+    #syncBtn {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.35);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    #syncBtn:hover { background: rgba(255,255,255,0.25); }
+    #syncBtn:disabled { opacity: 0.6; cursor: default; }
+    /* ─── ボトムナビ ─── */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      z-index: 100;
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.08);
+    }
+    .nav-btn {
+      flex: 1;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px 4px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      color: var(--text-sub);
+      font-size: 0.7rem;
+      font-weight: 500;
+      font-family: inherit;
+      transition: color 0.15s;
+      position: relative;
+    }
+    .nav-btn .material-symbols-outlined { font-size: 24px; }
+    .nav-btn.active { color: var(--primary); }
+    .nav-btn.active::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 20%; right: 20%;
+      height: 3px;
+      background: var(--primary);
+      border-radius: 0 0 3px 3px;
+    }
+    .cart-badge {
+      position: absolute;
+      top: 6px; right: calc(50% - 22px);
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      min-width: 18px;
+      height: 18px;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 4px;
+    }
+    /* ─── メインコンテンツ ─── */
+    main {
+      flex: 1;
+      padding: 16px 16px 80px;
+      max-width: 720px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    /* ─── 画面切り替え ─── */
+    .screen { display: none; }
+    .screen.active { display: block; }
+    /* ─── ステップ表示 ─── */
+    .step-bar {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      box-shadow: var(--shadow);
+      gap: 4px;
+    }
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: var(--text-sub);
+    }
+    .step-item.done { color: var(--success); }
+    .step-item.active { color: var(--primary); font-weight: 700; }
+    .step-num {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--border);
+      color: var(--text-sub);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 700;
+      flex-shrink: 0;
+    }
+    .step-item.done .step-num { background: var(--success); color: #fff; }
+    .step-item.active .step-num { background: var(--primary); color: #fff; }
+    .step-arrow { color: var(--border); margin: 0 2px; font-size: 0.8rem; }
+    /* ─── 戻るボタン ─── */
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 4px 0;
+      margin-bottom: 16px;
+      font-family: inherit;
+    }
+    .back-btn .material-symbols-outlined { font-size: 20px; }
+    /* ─── セクションタイトル ─── */
+    .section-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .section-title .material-symbols-outlined {
+      font-size: 20px;
+      color: var(--primary);
+    }
+    /* ─── カテゴリグリッド ─── */
+    .category-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    @media (min-width: 500px) {
+      .category-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    .cat-card {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+    .cat-card:active { transform: scale(0.97); }
+    .cat-card .cat-icon-wrap {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px;
+    }
+    .cat-card .cat-icon-wrap .material-symbols-outlined { font-size: 28px; color: #fff; }
+    .cat-card .cat-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+    .cat-card .cat-count {
+      font-size: 0.75rem;
+      color: var(--text-sub);
+    }
+    /* ─── パターンリスト ─── */
+    .pattern-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .pattern-btn {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      font-family: inherit;
+      transition: all 0.15s;
+      box-shadow: var(--shadow);
+      text-align: left;
+    }
+    .pattern-btn:hover { border-color: var(--primary); background: var(--primary-light); }
+    .pattern-btn:active { transform: scale(0.98); }
+    .pattern-btn .material-symbols-outlined { font-size: 18px; color: var(--text-sub); }
+    /* ─── サイズ選択 ─── */
+    .size-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .size-btn {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 18px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--text);
+      font-family: inherit;
+      transition: all 0.15s;
+      box-shadow: var(--shadow);
+    }
+    .size-btn:hover { border-color: var(--primary); background: var(--primary-light); }
+    .size-btn:active { transform: scale(0.97); }
+    /* ─── 結果エリア ─── */
+    .result-header {
+      background: var(--primary-light);
+      border: 2px solid var(--primary);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 14px;
+    }
+    .result-header .sel-info {
+      font-size: 0.85rem;
+      color: var(--text-sub);
+      line-height: 1.8;
+    }
+    .result-header .sel-info strong { color: var(--primary-dark); }
+    .result-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      border: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .btn .material-symbols-outlined { font-size: 18px; }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(21,101,192,0.3);
+    }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-outline {
+      background: var(--surface);
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+    .btn-outline:hover { background: var(--primary-light); }
+    .btn-success {
+      background: var(--success);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(46,125,50,0.3);
+    }
+    .btn-success:hover { background: #1b5e20; }
+    .btn-danger {
+      background: none;
+      color: var(--danger);
+      border-color: #ef9a9a;
+    }
+    .btn-danger:hover { background: var(--danger-light); }
+    .material-list { display: flex; flex-direction: column; gap: 8px; }
+    .material-row {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow);
+    }
+    .material-row:nth-child(even) { background: #fafafa; }
+    .mat-name { font-size: 0.95rem; font-weight: 500; }
+    .mat-qty {
+      background: var(--primary);
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 20px;
+      min-width: 54px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    /* ─── カート ─── */
+    .cart-empty {
+      text-align: center;
+      padding: 40px 16px;
+      color: var(--text-sub);
+    }
+    .cart-empty .material-symbols-outlined { font-size: 48px; opacity: 0.3; display: block; margin-bottom: 8px; }
+    .cart-item-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow);
+    }
+    .cart-item-info .cart-item-name { font-size: 0.95rem; font-weight: 700; }
+    .cart-item-info .cart-item-meta { font-size: 0.78rem; color: var(--text-sub); margin-top: 2px; }
+    .cart-item-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .qty-ctrl {
+      display: flex;
+      align-items: center;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .qty-ctrl button {
+      width: 34px; height: 34px;
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      font-weight: 700;
+    }
+    .qty-ctrl button:hover { background: var(--primary-light); }
+    .qty-val {
+      width: 38px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+      border-left: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      padding: 6px 0;
+    }
+    .del-btn {
+      background: none;
+      border: 1px solid #ef9a9a;
+      color: var(--danger);
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .del-btn:hover { background: var(--danger-light); }
+    .del-btn .material-symbols-outlined { font-size: 18px; }
+    /* ─── 合計テーブル ─── */
+    .total-table-wrap {
+      margin-top: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .total-table-wrap .tbl-title {
+      background: var(--primary-light);
+      padding: 10px 16px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--primary-dark);
+      border-bottom: 1px solid var(--border);
+    }
+    table.total-tbl {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    .total-tbl th {
+      background: #f5f5f5;
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-sub);
+      border-bottom: 1px solid var(--border);
+    }
+    .total-tbl td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .total-tbl tr:last-child td { border-bottom: none; }
+    .total-tbl tr:hover td { background: var(--primary-light); }
+    .qty-pill {
+      background: var(--primary);
+      color: #fff;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      display: inline-block;
+    }
+    /* ─── 逆引き検索 ─── */
+    .search-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .search-input {
+      flex: 1;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      font-size: 0.95rem;
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    .search-input:focus { border-color: var(--primary); }
+    .search-btn {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 0 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      font-family: inherit;
+    }
+    .search-btn .material-symbols-outlined { font-size: 20px; }
+    .rev-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow);
+    }
+    .rev-card .rev-mat { font-size: 0.95rem; font-weight: 700; color: var(--primary-dark); }
+    .rev-card .rev-meta { font-size: 0.78rem; color: var(--text-sub); margin-top: 3px; }
+    .rev-card .btn-sm {
+      padding: 8px 12px;
+      font-size: 0.82rem;
+      border-radius: 6px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+      font-family: inherit;
+      flex-shrink: 0;
+    }
+    /* ─── 空のステート ─── */
+    .empty-state {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--text-sub);
+    }
+    .empty-state .material-symbols-outlined { font-size: 44px; opacity: 0.3; display: block; margin-bottom: 8px; }
+    /* ─── トースト ─── */
+    #toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #323232;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 24px;
+      font-size: 0.88rem;
+      font-weight: 500;
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+      max-width: 90vw;
+      text-align: center;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    /* ─── カードグループ gap ─── */
+    .card-group { display: flex; flex-direction: column; gap: 8px; }
+    .cart-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    /* ─── 印刷 ─── */
+    @media print {
+      header, .bottom-nav, .back-btn, .result-actions, #toast,
+      .step-bar, .nav-btn { display: none !important; }
+      body { background: #fff !important; }
+      main { padding: 0 !important; }
+      .print-header { display: block !important; margin-bottom: 12px; }
+      .material-row { box-shadow: none !important; border: 1px solid #ccc !important; }
+      .mat-qty { background: #333 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+    .print-header { display: none; }
+
+    /* ─── デモバナー ─── */
+    .demo-banner {
+      background: linear-gradient(135deg, #ff6f00, #ff8f00);
+      color: #fff;
+      text-align: center;
+      padding: 8px 16px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      position: sticky;
+      top: 56px;
+      z-index: 99;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+    .demo-banner a { color: #fff; text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<!-- ヘッダー -->
+<header>
+  <div class="header-title">
+    <span class="material-symbols-outlined">bolt</span>
+    材料検索システム
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="status-dot" id="statusDot"></div>
+    <button id="syncBtn" onclick="syncData()">
+      <span class="material-symbols-outlined" style="font-size:16px">sync</span>同期
+    </button>
+  </div>
+</header>
+
+
+<!-- デモバナー -->
+<div class="demo-banner">
+  ⚡ これはデモ版です。実際のデータは含まれていません。Google スプレッドシートとの同期は無効化されています。
+</div>
+
+<!-- メインコンテンツ -->
+<main>
+
+  <!-- ── SCREEN 1: カテゴリ選択 ── -->
+  <div id="screenCat" class="screen active">
+    <div class="section-title">
+      <span class="material-symbols-outlined">category</span>
+      カテゴリを選んでください
+    </div>
+    <div class="category-grid" id="categoryGrid"></div>
+  </div>
+
+  <!-- ── SCREEN 2: パターン選択 ── -->
+  <div id="screenPat" class="screen">
+    <button class="back-btn" onclick="goBack('screenCat')">
+      <span class="material-symbols-outlined">arrow_back_ios</span>カテゴリに戻る
+    </button>
+    <div id="stepBar2" class="step-bar"></div>
+    <div class="section-title">
+      <span class="material-symbols-outlined">format_list_bulleted</span>
+      パターンを選んでください
+    </div>
+    <div class="pattern-list" id="patternList"></div>
+  </div>
+
+  <!-- ── SCREEN 3: サイズ選択 ── -->
+  <div id="screenSize" class="screen">
+    <button class="back-btn" onclick="goBack('screenPat')">
+      <span class="material-symbols-outlined">arrow_back_ios</span>パターンに戻る
+    </button>
+    <div id="stepBar3" class="step-bar"></div>
+    <div class="section-title">
+      <span class="material-symbols-outlined">straighten</span>
+      サイズ・アームを選んでください
+    </div>
+    <div class="size-grid" id="sizeGrid"></div>
+  </div>
+
+  <!-- ── SCREEN 4: 結果表示 ── -->
+  <div id="screenResult" class="screen">
+    <button class="back-btn" onclick="goBack('screenSize')">
+      <span class="material-symbols-outlined">arrow_back_ios</span>サイズに戻る
+    </button>
+    <div id="stepBar4" class="step-bar"></div>
+    <div class="result-header">
+      <div class="sel-info" id="resultSummary"></div>
+      <div class="result-actions">
+        <button class="btn btn-success" onclick="addToCart()">
+          <span class="material-symbols-outlined">add_shopping_cart</span>集計リストに追加
+        </button>
+        <button class="btn btn-outline" onclick="copyResult()">
+          <span class="material-symbols-outlined">content_copy</span>コピー
+        </button>
+        <button class="btn btn-outline" onclick="printResult()">
+          <span class="material-symbols-outlined">print</span>印刷
+        </button>
+      </div>
+    </div>
+    <div class="print-header" id="printHeader"></div>
+    <div class="material-list" id="materialList"></div>
+  </div>
+
+  <!-- ── SCREEN: 集計リスト ── -->
+  <div id="screenCart" class="screen">
+    <div class="section-title">
+      <span class="material-symbols-outlined">shopping_cart</span>
+      集計リスト
+    </div>
+    <div class="cart-actions">
+      <button class="btn btn-primary" onclick="copyCart()">
+        <span class="material-symbols-outlined">content_copy</span>合計をコピー
+      </button>
+      <button class="btn btn-outline" onclick="printCart()">
+        <span class="material-symbols-outlined">print</span>印刷
+      </button>
+      <button class="btn btn-danger" onclick="clearCart()">
+        <span class="material-symbols-outlined">delete_sweep</span>クリア
+      </button>
+    </div>
+    <div class="card-group" id="cartList"></div>
+    <div class="total-table-wrap" id="totalWrap" style="display:none">
+      <div class="tbl-title">合計必要材料リスト</div>
+      <table class="total-tbl">
+        <thead><tr><th>材料名</th><th>合計数量</th></tr></thead>
+        <tbody id="totalBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── SCREEN: 逆引き検索 ── -->
+  <div id="screenReverse" class="screen">
+    <div class="section-title">
+      <span class="material-symbols-outlined">find_in_page</span>
+      逆引き検索（材料名から探す）
+    </div>
+    <div class="search-bar">
+      <input type="search" class="search-input" id="reverseInput"
+             placeholder="例：アームタイ、碍子、バンド"
+             oninput="runReverse()" />
+      <button class="search-btn" onclick="runReverse()">
+        <span class="material-symbols-outlined">search</span>
+      </button>
+    </div>
+    <div class="card-group" id="reverseList">
+      <div class="empty-state">
+        <span class="material-symbols-outlined">find_in_page</span>
+        材料名のキーワードを入力してください
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ボトムナビ -->
+<div class="bottom-nav">
+  <button class="nav-btn active" id="navSearch" onclick="switchTab('search')">
+    <span class="material-symbols-outlined">search</span>
+    材料検索
+  </button>
+  <button class="nav-btn" id="navCart" onclick="switchTab('cart')">
+    <span class="material-symbols-outlined">shopping_cart</span>
+    <span id="cartBadge" class="cart-badge" style="display:none">0</span>
+    集計リスト
+  </button>
+  <button class="nav-btn" id="navReverse" onclick="switchTab('reverse')">
+    <span class="material-symbols-outlined">find_in_page</span>
+    逆引き検索
+  </button>
+</div>
+
+<!-- トースト -->
+<div id="toast"></div>
+
+<script>
+  // ── データ ──
+  const INITIAL_EMBEDDED_DATA = {"headers": ["pattern", "wire size", "カテゴリ", "material1", "数量", "material2", "数量", "material3", "数量", "material4", "数量", "material5", "数量", "材料", "数量", "material6", "数量", "material7", "数量", "material8", "数量", "material9", "数量", "material10", "数量", "material11", "数量", "material12", "数量", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], "rows": [["パターン11", "25SQ", "高圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "AH通り碍子カバー", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11", "58SQ", "高圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "AH通り碍子カバー", "3", "C座", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11", "120SQ", "高圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "AH通り碍子カバー", "3", "C座", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11", "200SQ", "高圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "AH通り碍子カバー", "3", "C座", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11", "400SQ", "高圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "AH通り碍子カバー", "3", "C座", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン12", "25SQ", "高圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "12", "クランプ（小）", "6", "AH引留カバー", "6", "OE25通りバインド", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン12", "58SQ", "高圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "12", "クランプ（小）", "6", "AH引留カバー", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン12", "120SQ", "高圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "12", "クランプ（中）", "6", "AH引留カバー", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン12", "200SQ", "高圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "12", "クランプ（中）", "6", "AH引留カバー", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン12", "400SQ", "高圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "12", "クランプ（大）", "6", "AH引留カバー(大）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン13", "25SQ", "高圧", "１６x１２０", "1", "１６x２４０", "1", "１６x３００", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "4", "６００ストラップ", "2", "クランプ（小）", "3", "１２x１２０", "4", "AH引留カバー", "3", "端末キャップ（小）", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン13", "58SQ", "高圧", "１６x１２０", "1", "１６x２４０", "1", "１６x３００", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "4", "６００ストラップ", "2", "クランプ（小）", "3", "１２x１２０", "4", "AH引留カバー", "3", "端末キャップ（小）", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン13", "120SQ", "高圧", "１６x１２０", "1", "１６x２４０", "1", "１６x４００", "3", "アームタイ１０００", "1", "アームタイ８００", "1", "抱バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "4", "６００ストラップ", "2", "クランプ（中）", "3", "１２x１２０", "4", "AH引留カバー", "3", "端末キャップ（中）", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン13", "200SQ", "高圧", "１６x１２０", "1", "１６x２４０", "1", "１６x４００", "3", "アームタイ１０００", "1", "アームタイ８００", "1", "抱バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "4", "６００ストラップ", "2", "クランプ（中）", "3", "１２x１２０", "4", "AH引留カバー", "3", "端末キャップ（中）", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン13", "400SQ", "高圧", "１６x１２０", "1", "１６x２４０", "1", "１６x４００", "3", "アームタイ１０００", "1", "アームタイ８００", "1", "抱バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "4", "６００ストラップ", "2", "クランプ（大）", "3", "１２x１２０", "4", "AH引留カバー（大）", "3", "端末キャップ（大）", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン14", "25SQ", "高圧", "１６x１２０", "3", "単バンド１７５", "2", "１６x２１０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "アームタイバンド２２０", "1", "V金物", "1", "曲がりストラップ", "8", "６００ストラップ", "4", "クランプ（小）", "6", "１２x１２０", "3", "AH引留カバー", "6", "25OE通りバインド", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン14", "58SQ", "高圧", "１６x１２０", "3", "単バンド１７５", "2", "１６x２１０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "アームタイバンド２２０", "1", "V金物", "1", "曲がりストラップ", "8", "６００ストラップ", "4", "クランプ（小）", "6", "１２x１２０", "3", "AH引留カバー", "6", "58OE通りバインド", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン14", "120SQ", "高圧", "１６x１２０", "3", "単バンド１７５", "2", "１６x２１０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "アームタイバンド２２０", "1", "V金物", "1", "曲がりストラップ", "8", "６００ストラップ", "4", "クランプ（中）", "6", "１２x１２０", "3", "AH引留カバー", "6", "120OE通りバインド", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン14", "200SQ", "高圧", "１６x１２０", "3", "単バンド１７５", "2", "１６x２１０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "アームタイバンド２２０", "1", "V金物", "1", "曲がりストラップ", "8", "６００ストラップ", "4", "クランプ（中）", "6", "１２x１２０", "3", "AH引留カバー", "6", "200OE通りバインド", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン14", "400SQ", "高圧", "１６x１２０", "3", "単バンド１７５", "2", "１６x２１０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "アームタイバンド２２０", "1", "V金物", "1", "曲がりストラップ", "8", "６００ストラップ", "4", "クランプ（大）", "6", "１２x１２０", "3", "AH引留カバー(大）", "6", "400OE通りバインド", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["アングル", "25SQ", "高圧", "１６x１２０", "3", "１６x２４０", "1", "１６x３００", "1", "アームタイ１０００", "3", "アームタイ８００", "２", "単バンド１７５", "1", "単バンド２２６", "1", "曲がりストラップ", "8", "６００ストラップ", "4", "クランプ（小）", "6", "１２x１２０", "8", "AH引留カバー", "6", "25OE通りバインド", "2", "アームタイバンド２２０", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["アングル", "58SQ", "高圧", "１６x１２０", "3", "１６x２４０", "1", "１６x３００", "1", "アームタイ１０００", "3", "アームタイ８００", "２", "単バンド１７５", "1", "単バンド２２６", "1", "曲がりストラップ", "8", "６００ストラップ", "4", "クランプ（小）", "6", "１２x１２０", "8", "AH引留カバー", "6", "58OE通りバインド", "2", "アームタイバンド２２０", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["抱アングル", "120SQ", "高圧", "１６x１２０", "3", "１６x２４０", "1", "１６x４００", "5", "アームタイ１０００", "3", "アームタイ８００", "２", "抱バンド１７５", "1", "抱バンド２２６", "1", "曲がりストラップ", "8", "６００ストラップ", "4", "クランプ（中）", "6", "１２x１２０", "8", "AH引留カバー", "6", "120OE通りバインド", "2", "アームタイバンド２２０", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["抱アングル", "200SQ", "高圧", "１６x１２０", "3", "１６x２４０", "1", "１６x４００", "5", "アームタイ１０００", "3", "アームタイ８００", "２", "抱バンド１７５", "1", "抱バンド２２６", "1", "曲がりストラップ", "8", "６００ストラップ", "4", "クランプ（中）", "6", "１２x１２０", "8", "AH引留カバー", "6", "200OE通りバインド", "2", "アームタイバンド２２０", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["抱アングル", "400SQ", "高圧", "１６x１２０", "3", "１６x２４０", "1", "１６x４００", "5", "アームタイ１０００", "3", "アームタイ８００", "２", "抱バンド１７５", "1", "抱バンド２２６", "1", "曲がりストラップ", "8", "６００ストラップ", "4", "クランプ（大）", "6", "１２x１２０", "8", "AH引留カバー（大）", "6", "400OE通りバインド", "2", "アームタイバンド２２０", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン15", "120SQ", "高圧", "１６x１２０", "3", "１６x２４０", "1", "アーームタイ１０００", "2", "アームタイ８００", "2", "単バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "4", "６００ストラップ", "2", "クランプ（中）", "3", "AH引留カバー", "3", "補強金物", "1", "１２x１２０", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン15", "200SQ", "高圧", "１６x１２０", "3", "１６x２４０", "1", "アーームタイ１０００", "2", "アームタイ８００", "2", "単バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "4", "６００ストラップ", "2", "クランプ（中）", "3", "AH引留カバー", "3", "補強金物", "1", "１２x１２０", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["アングル", "120SQ", "高圧", "１６x１２０", "6", "１６x２４０", "1", "アーームタイ１０００", "2", "アームタイ８００", "2", "単バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "8", "単バンド２２６", "1", "６００ストラップ", "4", "クランプ（中）", "6", "AH引留カバー", "6", "120OE通りバインド", "2", "１２x１２０", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["アングル", "200SQ", "高圧", "１６x１２０", "6", "１６x２４０", "1", "アーームタイ１０００", "2", "アームタイ８００", "2", "単バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "8", "単バンド２２６", "1", "６００ストラップ", "4", "クランプ（中）", "6", "AH引留カバー", "6", "200OE通りバインド", "2", "１２x１２０", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン21", "25SQ", "高圧", "１６x２７０", "1", "１６x１５０", "2", "電話バンド", "1", "", "", "AH通り碍子カバー", "3", "単バンド１７５", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン21", "58SQ", "高圧", "１６x２７０", "1", "１６x１５０", "2", "電話バンド", "1", "C座", "3", "AH通り碍子カバー", "3", "単バンド１７５", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン21", "120SQ", "高圧", "１６x２７０", "1", "１６x１５０", "1", "TRアームタイバンド", "1", "C座", "3", "AH通り碍子カバー", "3", "抱バンド１７５", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン21", "200SQ", "高圧", "１６x２７０", "1", "１６x１５０", "1", "TRアームタイバンド", "1", "C座", "3", "AH通り碍子カバー", "3", "抱バンド１７５", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン21", "400SQ", "高圧", "１６x２７０", "1", "１６x１５０", "1", "TRアームタイバンド", "1", "C座", "3", "AH通り碍子カバー", "3", "抱バンド１７５", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン22", "25SQ", "高圧", "１６x２７０", "1", "１６x１５０", "2", "電話バンド", "1", "単バンド１７５", "1", "単バンド１７５", "1", "単バンド１７５", "1", "AH引留カバー", "6", "OE25通りバインド", "3", "１２x１２０", "3", "クランプ（小）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン22", "58SQ", "高圧", "１６x２７０", "1", "１６x１５０", "2", "電話バンド", "1", "単バンド１７５", "1", "単バンド１７５", "1", "単バンド１７５", "1", "AH引留カバー", "6", "", "", "１２x１２０", "3", "クランプ（小）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン22", "120SQ", "高圧", "１６x２７０", "1", "１６x１５０", "1", "TRアームタイバンド", "1", "抱バンド１７５", "1", "抱バンド１７５", "1", "抱バンド１７５", "1", "AH引留カバー", "6", "", "", "１２x１２０", "3", "クランプ（中）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン22", "200SQ", "高圧", "１６x２７０", "1", "１６x１５０", "1", "TRアームタイバンド", "1", "抱バンド１７５", "1", "抱バンド１７５", "1", "抱バンド１７５", "1", "AH引留カバー", "6", "", "", "１２x１２０", "3", "クランプ（中）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン22", "400SQ", "高圧", "１６x２７０", "1", "１６x１５０", "1", "TRアームタイバンド", "1", "抱バンド１７５", "1", "抱バンド１７５", "1", "抱バンド１７５", "1", "AH引留カバー(大）", "6", "", "", "１２x１２０", "3", "クランプ（大）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン23", "25SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１５０", "1", "１２x１２０", "4", "単バンド１７５", "1", "曲がりストラップ", "6", "クランプ（小）", "3", "AH引留カバー", "3", "ねじりストラップ", "2", "丸シンブル", "1", "１２x１００", "1", "電話バンド", "1", "TRアームタイバンド", "1", "端末キャップ（小）", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン23", "58SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１５０", "1", "１２x１２０", "4", "単バンド１７５", "1", "曲がりストラップ", "6", "クランプ（小）", "3", "AH引留カバー", "3", "ねじりストラップ", "2", "丸シンブル", "1", "１２x１００", "1", "電話バンド", "1", "TRアームタイバンド", "1", "端末キャップ（小）", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン23", "120SQ", "高圧", "１６x４００", "3", "", "", "１６x１５０", "1", "１２x１２０", "4", "抱バンド１７５", "1", "曲がりストラップ", "6", "クランプ（中）", "3", "AH引留カバー", "3", "ねじりストラップ", "2", "丸シンブル", "1", "１２x１００", "1", "TRアームタイバンド", "1", "", "", "端末キャップ（中）", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン23", "200SQ", "高圧", "１６x４００", "3", "", "", "１６x１５０", "1", "１２x１２０", "4", "抱バンド１７５", "1", "曲がりストラップ", "6", "クランプ（中）", "3", "AH引留カバー", "3", "ねじりストラップ", "2", "丸シンブル", "1", "１２x１００", "1", "TRアームタイバンド", "1", "", "", "端末キャップ（中）", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン23", "400SQ", "高圧", "１６x４００", "3", "", "", "１６x１５０", "1", "１２x１２０", "4", "抱バンド１７５", "1", "曲がりストラップ", "6", "クランプ（大）", "3", "AH引留カバー（大）", "3", "ねじりストラップ", "2", "丸シンブル", "1", "１２x１００", "1", "TRアームタイバンド", "1", "", "", "端末キャップ（大）", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41", "25SQ", "高圧", "直付金物", "3", "AH通り碍子カバー", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41", "58SQ", "高圧", "直付金物", "3", "AH通り碍子カバー", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41", "120SQ", "高圧", "直付金物", "3", "AH通り碍子カバー", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41", "200SQ", "高圧", "直付金物", "3", "AH通り碍子カバー", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41", "400SQ", "高圧", "直付金物", "3", "AH通り碍子カバー", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42", "25SQ", "高圧", "直付金物", "9", "１２x１２０", "6", "ねじりストラップ", "12", "クランプ（小）", "6", "AH引留カバー", "6", "OE25通りバインド", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42", "58SQ", "高圧", "直付金物", "6", "１２x１２０", "6", "ねじりストラップ", "12", "クランプ（小）", "6", "AH引留カバー", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42", "120SQ", "高圧", "直付金物", "6", "１２x１２０", "6", "ねじりストラップ", "12", "クランプ（中）", "6", "AH引留カバー", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42", "200SQ", "高圧", "直付金物", "6", "１２x１２０", "6", "ねじりストラップ", "12", "クランプ（中）", "6", "AH引留カバー", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42", "400SQ", "高圧", "直付金物", "6", "１２x１２０", "6", "ねじりストラップ", "12", "クランプ（大）", "6", "AH引留カバー(大）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43", "25SQ", "高圧", "直付金物", "3", "１２x１２０", "3", "ねじりストラップ", "6", "クランプ（小）", "3", "AH引留カバー", "3", "端末キャップ（小）", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43", "58SQ", "高圧", "直付金物", "3", "１２x１２０", "3", "ねじりストラップ", "6", "クランプ（小）", "3", "AH引留カバー", "3", "端末キャップ（小）", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43", "120SQ", "高圧", "直付金物", "3", "１２x１２０", "3", "ねじりストラップ", "6", "クランプ（中）", "3", "AH引留カバー", "3", "端末キャップ（中）", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43", "200SQ", "高圧", "直付金物", "3", "１２x１２０", "3", "ねじりストラップ", "6", "クランプ（中）", "3", "AH引留カバー", "3", "端末キャップ（中）", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43", "400SQ", "高圧", "直付金物", "3", "１２x１２０", "3", "ねじりストラップ", "6", "クランプ（大）", "3", "AH引留カバー(大）", "3", "端末キャップ（大）", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン51", "25SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "AH通り碍子カバー", "3", "単バンド１７５", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン51", "58SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "AH通り碍子カバー", "3", "単バンド１７５", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン51", "120SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "", "", "AH通り碍子カバー", "3", "単バンド１７５", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン51", "200SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "", "", "AH通り碍子カバー", "3", "単バンド１７５", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン51", "400SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "", "", "AH通り碍子カバー", "3", "単バンド１７５", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン52", "25SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "曲がりストラップ", "12", "クランプ（小）", "6", "AH引留カバー", "6", "OE25通りバインド", "", "１２x１２０", "3", "単バンド１７５", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン52", "58SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "曲がりストラップ", "12", "クランプ（小）", "6", "AH引留カバー", "6", "", "", "１２x１２０", "3", "単バンド１７５", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン52", "120SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "", "", "曲がりストラップ", "12", "クランプ（中）", "6", "AH引留カバー", "6", "", "", "１２x１２０", "3", "単バンド１７５", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン52", "200SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "", "", "曲がりストラップ", "12", "クランプ（中）", "6", "AH引留カバー", "6", "", "", "１２x１２０", "3", "単バンド１７５", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン52", "400SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "", "", "曲がりストラップ", "12", "クランプ（大）", "6", "AH引留カバー(大）", "6", "", "", "１２x１２０", "3", "単バンド１７５", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン53", "25SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１５０", "2", "単バンド１７５", "1", "１６x１２０", "2", "電話バンド", "1", "１２x１２０", "3", "曲がりストラップ", "6", "クランプ（小）", "3", "AH引留カバー", "3", "ねじりストラップ", "2", "丸シンブル", "1", "１２x１００", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン53", "58SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１５０", "2", "単バンド１７５", "1", "１６x１２０", "2", "電話バンド", "1", "１２x１２０", "3", "曲がりストラップ", "6", "クランプ（小）", "3", "AH引留カバー", "3", "ねじりストラップ", "2", "丸シンブル", "1", "１２x１００", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン53", "120SQ", "高圧", "１６x４００", "6", "", "", "１６x１５０", "1", "抱バンド１７５", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "１２x１２０", "3", "曲がりストラップ", "6", "クランプ（中）", "3", "AH引留カバー", "3", "ねじりストラップ", "2", "丸シンブル", "1", "１２x１００", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン53", "200SQ", "高圧", "１６x４００", "6", "", "", "１６x１５０", "1", "抱バンド１７５", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "１２x１２０", "3", "曲がりストラップ", "6", "クランプ（中）", "3", "AH引留カバー", "3", "ねじりストラップ", "2", "丸シンブル", "1", "１２x１００", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン53", "400SQ", "高圧", "１６x４００", "6", "", "", "１６x１５０", "1", "抱バンド１７５", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "１２x１２０", "3", "曲がりストラップ", "6", "クランプ（大）", "3", "AH引留カバー（大）", "3", "ねじりストラップ", "2", "丸シンブル", "1", "１２x１００", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11", "25SQ  3L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "低圧ピン碍子（青）", "1", "低圧ピン碍子（白）", "2", "", "", "25OW通りバインド", "3", "", "", "", "", "4T24", "3", "", "", "", "", "Aリング", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11", "25SQ 4L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "低圧ピン碍子（青）", "1", "低圧ピン碍子（白）", "2", "低圧ピン碍子（茶）", "1", "25OW通りバインド", "4", "", "", "", "", "4T24", "4", "", "", "", "", "Aリング", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11", "58SQ 3L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "低圧ピン碍子（青）", "1", "低圧ピン碍子（白）", "2", "", "", "", "", "58OW通りバインド", "3", "", "", "5T24", "3", "", "", "", "", "Aリング", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11", "58SQ 4L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "低圧ピン碍子（青）", "1", "低圧ピン碍子（白）", "2", "低圧ピン碍子（茶）", "1", "", "", "58OW通りバインド", "4", "", "", "5T24", "4", "", "", "", "", "Aリング", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11", "58 25SQ 3L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "低圧ピン碍子（青）", "1", "低圧ピン碍子（白）", "2", "", "", "25OW通りバインド", "1", "58OW通りバインド", "2", "", "", "5T24", "2", "4T24", "1", "", "", "Aリング", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11", "58 25SQ 4L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "低圧ピン碍子（青）", "1", "低圧ピン碍子（白）", "2", "低圧ピン碍子（茶）", "1", "25OW通りバインド", "2", "58OW通りバインド", "2", "", "", "5T24", "2", "4T24", "2", "", "", "Aリング", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11", "120 58SQ 3L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "低圧ピン碍子（青）", "1", "低圧ピン碍子（白）", "2", "", "", "", "", "58OW通りバインド", "1", "120OW通りバインド", "2", "6T24", "2", "5T24", "2", "", "", "Aリング", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11", "120 58SQ 4L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "低圧ピン碍子（青）", "1", "低圧ピン碍子（白）", "2", "低圧ピン碍子（茶）", "1", "", "", "58OW通りバインド", "2", "120OW通りバインド", "2", "6T24", "2", "5T24", "2", "", "", "Aリング", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11", "120 58 25SQ 4L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "低圧ピン碍子（青）", "1", "低圧ピン碍子（白）", "2", "低圧ピン碍子（茶）", "1", "25OW通りバインド", "1", "58OW通りバインド", "1", "120OW通りバインド", "2", "6T24", "2", "5T24", "1", "4T24", "1", "Aリング", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン12", "25SQ  3L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１００", "6", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "", "", "SBグリップ　２５", "6", "", "", "", "", "グリップカバー", "6", "６００ストラップ", "4", "小ストラップ", "12", "4T24", "6", "", "", "", "", "", "", "", "", "Aリング", "4", "", "", "", "", "", "", "", ""], ["パターン12", "25SQ 4L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１００", "8", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "SBグリップ　２５", "8", "", "", "", "", "グリップカバー", "8", "", "", "小ストラップ", "16", "4T24", "8", "", "", "", "", "", "", "", "", "Aリング", "4", "", "", "", "", "", "", "", ""], ["パターン12", "58SQ 3L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１００", "6", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "", "", "", "", "SBグリップ５８", "6", "", "", "グリップカバー", "6", "６００ストラップ", "4", "小ストラップ", "12", "5T24", "3", "", "", "", "", "5T5", "3", "", "", "Aリング", "4", "", "", "", "", "", "", "", ""], ["パターン12", "58SQ 4L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１００", "8", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "", "", "SBグリップ５８", "8", "", "", "グリップカバー", "8", "", "", "小ストラップ", "16", "5T24", "4", "", "", "", "", "5T5", "3", "", "", "Aリング", "4", "", "", "", "", "", "", "", ""], ["パターン12", "58 25SQ 3L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１００", "6", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "", "", "SBグリップ　２５", "2", "SBグリップ５８", "4", "", "", "グリップカバー", "6", "６００ストラップ", "4", "小ストラップ", "12", "5T24", "2", "4T24", "2", "", "", "5T5", "2", "", "", "Aリング", "4", "", "", "", "", "", "", "", ""], ["パターン12", "58 25SQ 4L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１００", "8", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "SBグリップ　２５", "4", "SBグリップ５８", "4", "", "", "グリップカバー", "8", "", "", "小ストラップ", "16", "5T24", "2", "4T24", "4", "", "", "5T5", "2", "", "", "Aリング", "4", "", "", "", "", "", "", "", ""], ["パターン12", "120 58SQ 3L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１００", "6", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "", "", "", "", "SBグリップ５８", "2", "SBグリップ １２０", "4", "グリップカバー", "6", "６００ストラップ", "4", "小ストラップ", "12", "6T24", "2", "5T24", "2", "", "", "5T5", "1", "6T6", "2", "Aリング", "4", "", "", "", "", "", "", "", ""], ["パターン12", "120 58SQ 4L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１００", "8", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "", "", "SBグリップ５８", "4", "SBグリップ １２０", "4", "グリップカバー", "8", "", "", "小ストラップ", "16", "6T24", "2", "5T24", "2", "", "", "5T5", "2", "6T6", "2", "Aリング", "4", "", "", "", "", "", "", "", ""], ["パターン12", "120 58 25SQ 4L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１００", "8", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "SBグリップ　２５", "2", "SBグリップ５８", "2", "SBグリップ １２０", "4", "グリップカバー", "8", "", "", "", "16", "6T24", "2", "5T24", "1", "4T24", "2", "5T5", "1", "6T6", "2", "Aリング", "4", "", "", "", "", "", "", "", ""], ["パターン13", "25SQ  3L", "低圧", "１６x１２０", "1", "１６x２４０", "1", "１６x３００", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１２０", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "SBグリップ　２５", "3", "", "", "", "", "グリップカバー", "3", "６００ストラップ", "2", "小ストラップ", "6", "4T24", "3", "", "", "", "", "Bリング", "4", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン13", "25SQ 4L", "低圧", "１６x１２０", "1", "１６x２４０", "1", "１６x３００", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１２０", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "SBグリップ　２５", "4", "", "", "", "", "グリップカバー", "4", "", "", "小ストラップ", "8", "4T24", "4", "", "", "", "", "Bリング", "4", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン13", "58SQ 3L", "低圧", "１６x１２０", "1", "１６x２４０", "1", "１６x３００", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１２０", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "", "", "SBグリップ５８", "3", "", "", "グリップカバー", "3", "６００ストラップ", "2", "小ストラップ", "6", "5T24", "3", "", "", "", "", "Bリング", "4", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン13", "58SQ 4L", "低圧", "１６x１２０", "1", "１６x２４０", "1", "１６x３００", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１２０", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "", "", "SBグリップ５８", "4", "", "", "グリップカバー", "4", "", "", "小ストラップ", "8", "5T24", "4", "", "", "", "", "Bリング", "4", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン13", "58 25SQ 3L", "低圧", "１６x１２０", "1", "１６x２４０", "1", "１６x３００", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１２０", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "SBグリップ　２５", "1", "SBグリップ５８", "2", "", "", "グリップカバー", "3", "６００ストラップ", "2", "小ストラップ", "6", "5T24", "2", "4T24", "1", "", "", "Bリング", "4", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン13", "58 25SQ 4L", "低圧", "１６x１２０", "1", "１６x２４０", "1", "１６x３００", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１２０", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "SBグリップ　２５", "2", "SBグリップ５８", "2", "", "", "グリップカバー", "4", "", "", "小ストラップ", "8", "5T24", "2", "4T24", "2", "", "", "Bリング", "4", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン13", "120 58SQ 3L", "低圧", "", "", "１６x２４０", "1", "１６x４００", "3", "アームタイ１０００", "1", "アームタイ８００", "1", "抱バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１２０", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "", "", "SBグリップ５８", "1", "SBグリップ １２０", "2", "グリップカバー", "3", "６００ストラップ", "2", "小ストラップ", "6", "6T24", "2", "5T24", "2", "", "", "Bリング", "4", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン13", "120 58SQ 4L", "低圧", "", "", "１６x２４０", "1", "１６x４００", "3", "アームタイ１０００", "1", "アームタイ８００", "1", "抱バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１２０", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "", "", "SBグリップ５８", "2", "SBグリップ １２０", "2", "グリップカバー", "4", "", "", "小ストラップ", "8", "6T24", "2", "5T24", "2", "", "", "Bリング", "4", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン13", "120 58 25SQ 4L", "低圧", "", "", "１６x２４０", "1", "１６x４００", "3", "アームタイ１０００", "1", "アームタイ８００", "1", "抱バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１２０", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "SBグリップ　２５", "1", "SBグリップ５８", "1", "SBグリップ １２０", "2", "グリップカバー", "4", "", "", "", "8", "6T24", "2", "5T24", "1", "4T24", "1", "Bリング", "4", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41", "25SQ  3L", "低圧", "自在バンド", "2", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "25OW通りバインド", "3", "", "", "", "", "4T24", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41", "25SQ 4L", "低圧", "自在バンド", "2", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "25OW通りバインド", "4", "", "", "", "", "4T24", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41", "58SQ 3L", "低圧", "自在バンド", "2", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "", "", "58OW通りバインド", "3", "", "", "5T24", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41", "58SQ 4L", "低圧", "自在バンド", "2", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "", "", "58OW通りバインド", "4", "", "", "5T24", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41", "58 25SQ 3L", "低圧", "自在バンド", "2", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "25OW通りバインド", "1", "58OW通りバインド", "2", "", "", "5T24", "2", "4T24", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41", "58 25SQ 4L", "低圧", "自在バンド", "2", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "25OW通りバインド", "2", "58OW通りバインド", "2", "", "", "5T24", "2", "4T24", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41", "120 58SQ 3L", "低圧", "自在バンド", "2", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "", "", "58OW通りバインド", "1", "120OW通りバインド", "2", "6T24", "2", "5T24", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41", "120 58SQ 4L", "低圧", "自在バンド", "2", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "", "", "58OW通りバインド", "2", "120OW通りバインド", "2", "6T24", "2", "5T24", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41", "120 58 25SQ 4L", "低圧", "自在バンド", "2", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "25OW通りバインド", "1", "58OW通りバインド", "1", "120OW通りバインド", "2", "6T24", "2", "5T24", "1", "4T24", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42", "25SQ  3L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "", "", "SBグリップ　２５", "6", "", "", "", "", "グリップカバー", "6", "4T24", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42", "25SQ 4L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "SBグリップ　２５", "8", "", "", "", "", "グリップカバー", "8", "4T24", "8", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42", "58SQ 3L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "", "", "", "", "SBグリップ５８", "6", "", "", "グリップカバー", "6", "5T24", "3", "", "", "", "", "5T5", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42", "58SQ 4L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "", "", "SBグリップ５８", "8", "", "", "グリップカバー", "8", "5T24", "4", "", "", "", "", "5T5", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42", "58 25SQ 3L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "", "", "SBグリップ　２５", "2", "SBグリップ５８", "4", "", "", "グリップカバー", "6", "5T24", "2", "4T24", "2", "", "", "5T5", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42", "58 25SQ 4L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "SBグリップ　２５", "4", "SBグリップ５８", "4", "", "", "グリップカバー", "8", "5T24", "2", "4T24", "4", "", "", "5T5", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42", "120 58SQ 3L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "", "", "", "", "SBグリップ５８", "2", "SBグリップ １２０", "4", "グリップカバー", "6", "6T24", "2", "5T24", "2", "", "", "5T5", "1", "6T6", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42", "120 58SQ 4L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "", "", "SBグリップ５８", "4", "SBグリップ １２０", "4", "グリップカバー", "8", "6T24", "2", "5T24", "2", "", "", "5T5", "2", "6T6", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42", "120 58 25SQ 4L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "SBグリップ　２５", "2", "SBグリップ５８", "2", "SBグリップ １２０", "4", "グリップカバー", "8", "6T24", "2", "5T24", "1", "4T24", "2", "5T5", "1", "6T6", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43", "25SQ  3L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "SBグリップ　２５", "3", "", "", "", "", "グリップカバー", "3", "4T24", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43", "25SQ 4L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "SBグリップ　２５", "4", "", "", "", "", "グリップカバー", "4", "4T24", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43", "58SQ 3L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "", "", "SBグリップ５８", "3", "", "", "グリップカバー", "3", "5T24", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43", "58SQ 4L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "", "", "SBグリップ５８", "4", "", "", "グリップカバー", "4", "5T24", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43", "58 25SQ 3L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "SBグリップ　２５", "1", "SBグリップ５８", "2", "", "", "グリップカバー", "3", "5T24", "2", "4T24", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43", "58 25SQ 4L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "SBグリップ　２５", "2", "SBグリップ５８", "2", "", "", "グリップカバー", "4", "5T24", "2", "4T24", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43", "120 58SQ 3L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "", "", "SBグリップ５８", "1", "SBグリップ １２０", "2", "グリップカバー", "3", "6T24", "2", "5T24", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43", "120 58SQ 4L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "", "", "SBグリップ５８", "2", "SBグリップ １２０", "2", "グリップカバー", "4", "6T24", "2", "5T24", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43", "120 58 25SQ 4L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "SBグリップ　２５", "1", "SBグリップ５８", "1", "SBグリップ １２０", "2", "グリップカバー", "4", "6T24", "2", "5T24", "1", "4T24", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン51", "25SQ  3L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "中線引留金物", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "25OW通りバインド", "3", "", "", "", "", "１２x１２０", "3", "１２x１００", "3", "単バンド１７５", "1", "単バンド２２６", "1", "Bリング", "4", "4T24", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン51", "25SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "中線引留金物", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "25OW通りバインド", "4", "", "", "", "", "１２x１２０", "4", "１２x１００", "4", "単バンド１７５", "1", "単バンド２２６", "1", "Bリング", "4", "4T24", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン51", "58SQ 3L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "中線引留金物", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "", "", "58OW通りバインド", "3", "", "", "１２x１２０", "3", "１２x１００", "3", "単バンド１７５", "1", "単バンド２２６", "1", "Bリング", "4", "5T24", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン51", "58SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "中線引留金物", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "", "", "58OW通りバインド", "4", "", "", "１２x１２０", "4", "１２x１００", "4", "単バンド１７５", "1", "単バンド２２６", "1", "Bリング", "4", "5T24", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン51", "58 25SQ 3L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "中線引留金物", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "25OW通りバインド", "1", "58OW通りバインド", "2", "", "", "１２x１２０", "3", "１２x１００", "3", "単バンド１７５", "1", "単バンド２２６", "1", "Bリング", "4", "5T24", "2", "4T24", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン51", "58 25SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "中線引留金物", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "25OW通りバインド", "2", "58OW通りバインド", "2", "", "", "１２x１２０", "4", "１２x１００", "4", "単バンド１７５", "1", "単バンド２２６", "1", "Bリング", "4", "5T24", "2", "4T24", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン51", "120 58SQ 3L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "", "", "中線引留金物", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "", "", "58OW通りバインド", "1", "120OW通りバインド", "2", "１２x１２０", "3", "１２x１００", "3", "単バンド１７５", "1", "単バンド２２６", "1", "Bリング", "4", "6T24", "2", "5T24", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン51", "120 58SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "", "", "中線引留金物", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "", "", "58OW通りバインド", "2", "120OW通りバインド", "2", "１２x１２０", "4", "１２x１００", "4", "単バンド１７５", "1", "単バンド２２６", "1", "Bリング", "4", "6T24", "2", "5T24", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン51", "120 58 25SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "", "", "中線引留金物", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "25OW通りバインド", "1", "58OW通りバインド", "1", "120OW通りバインド", "2", "１２x１２０", "4", "１２x１００", "4", "単バンド１７５", "1", "単バンド２２６", "1", "Bリング", "4", "6T24", "2", "5T24", "1", "4T24", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン52", "25SQ  3L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "１２x１２０", "3", "１２x１００", "6", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "", "", "SBグリップ　２５", "6", "", "", "", "", "グリップカバー", "6", "小ストラップ", "12", "Bリング", "4", "4T24", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン52", "25SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "１２x１２０", "4", "１２x１００", "8", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "SBグリップ　２５", "8", "", "", "", "", "グリップカバー", "8", "小ストラップ", "16", "Bリング", "4", "4T24", "8", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン52", "58SQ 3L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "１２x１２０", "3", "１２x１００", "6", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "", "", "", "", "SBグリップ５８", "6", "", "", "グリップカバー", "6", "小ストラップ", "12", "Bリング", "4", "5T24", "3", "", "", "", "", "5T5", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン52", "58SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "１２x１２０", "4", "１２x１００", "8", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "", "", "SBグリップ５８", "8", "", "", "グリップカバー", "8", "小ストラップ", "16", "Bリング", "4", "5T24", "4", "", "", "", "", "5T5", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン52", "58 25SQ 3L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "１２x１２０", "3", "１２x１００", "6", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "", "", "SBグリップ　２５", "2", "SBグリップ５８", "4", "", "", "グリップカバー", "6", "小ストラップ", "12", "Bリング", "4", "5T24", "2", "4T24", "2", "", "", "5T5", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン52", "58 25SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "１２x１２０", "4", "１２x１００", "8", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "SBグリップ　２５", "4", "SBグリップ５８", "4", "", "", "グリップカバー", "8", "小ストラップ", "16", "Bリング", "4", "5T24", "2", "4T24", "4", "", "", "5T5", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン52", "120 58SQ 3L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "", "", "１２x１２０", "3", "１２x１００", "6", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "", "", "", "", "SBグリップ５８", "2", "SBグリップ １２０", "4", "グリップカバー", "6", "小ストラップ", "12", "Bリング", "4", "6T24", "2", "5T24", "2", "", "", "5T5", "1", "6T6", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン52", "120 58SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "", "", "１２x１２０", "4", "１２x１００", "8", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "", "", "SBグリップ５８", "4", "SBグリップ １２０", "4", "グリップカバー", "8", "小ストラップ", "16", "Bリング", "4", "6T24", "2", "5T24", "2", "", "", "5T5", "2", "6T6", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン52", "120 58 25SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "", "", "１２x１２０", "4", "１２x１００", "8", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "SBグリップ　２５", "2", "SBグリップ５８", "2", "SBグリップ １２０", "4", "グリップカバー", "8", "小ストラップ", "16", "Bリング", "4", "6T24", "2", "5T24", "1", "4T24", "2", "5T5", "1", "6T6", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン53", "25SQ  3L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "2", "１２x１２０", "3", "１２x１００", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "SBグリップ　２５", "3", "", "", "", "", "グリップカバー", "3", "小ストラップ", "6", "ねじりストラップ", "2", "Bリング", "4", "4T24", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン53", "25SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "2", "１２x１２０", "4", "１２x１００", "5", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "SBグリップ　２５", "4", "", "", "", "", "グリップカバー", "4", "小ストラップ", "8", "ねじりストラップ", "2", "Bリング", "4", "4T24", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン53", "58SQ 3L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "2", "１２x１２０", "3", "１２x１００", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "", "", "SBグリップ５８", "3", "", "", "グリップカバー", "3", "小ストラップ", "6", "ねじりストラップ", "2", "Bリング", "4", "5T24", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン53", "58SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "2", "１２x１２０", "4", "１２x１００", "5", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "", "", "SBグリップ５８", "4", "", "", "グリップカバー", "4", "小ストラップ", "8", "ねじりストラップ", "2", "Bリング", "4", "5T24", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン53", "58 25SQ 3L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "2", "１２x１２０", "3", "１２x１００", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "SBグリップ　２５", "1", "SBグリップ５８", "2", "", "", "グリップカバー", "3", "小ストラップ", "6", "ねじりストラップ", "2", "Bリング", "4", "5T24", "2", "4T24", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン53", "58 25SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "2", "１２x１２０", "4", "１２x１００", "5", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "SBグリップ　２５", "2", "SBグリップ５８", "2", "", "", "グリップカバー", "4", "小ストラップ", "8", "ねじりストラップ", "2", "Bリング", "4", "5T24", "2", "4T24", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン53", "120 58SQ 3L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "１６x１５０", "1", "１２x１２０", "3", "１２x１００", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "", "", "SBグリップ５８", "1", "SBグリップ １２０", "2", "グリップカバー", "3", "小ストラップ", "6", "ねじりストラップ", "2", "Bリング", "4", "6T24", "2", "5T24", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン53", "120 58SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "１６x１５０", "1", "１２x１２０", "4", "１２x１００", "5", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "", "", "SBグリップ５８", "2", "SBグリップ １２０", "2", "グリップカバー", "4", "小ストラップ", "8", "ねじりストラップ", "2", "Bリング", "4", "6T24", "2", "5T24", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン53", "120 58 25SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "１６x１５０", "1", "１２x１２０", "4", "１２x１００", "5", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "SBグリップ　２５", "1", "SBグリップ５８", "1", "SBグリップ １２０", "2", "グリップカバー", "4", "小ストラップ", "8", "ねじりストラップ", "2", "Bリング", "4", "6T24", "2", "5T24", "1", "4T24", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン01", "Aアーム", "引込み", "アームタイ１０００", "1", "アームタイ８００", "1", "ノーアームタイバンド", "1", "アームタイバンド２２０", "1", "１６x１００", "1", "Aリング", "2", "ケーブルバンド", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン01", "Bアーム", "引込み", "アームタイ１０００", "1", "アームタイ８００", "1", "ノーアームタイバンド", "1", "アームタイバンド２２０", "1", "１６x１２０", "1", "Bリング", "2", "ケーブルバンド", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41", "25SQ", "架空地線", "架空地金物", "2", "アームタイバンド１９０", "2", "１２x１２０", "1", "１２x１００", "3", "中線引留金物", "1", "", "", "低圧引留碍子（青）", "1", "GW通りバインド　２５", "1", "M１２", "1", "４５T１", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41", "58SQ", "架空地線", "架空地金物", "2", "アームタイバンド１９０", "2", "１２x１２０", "1", "１２x１００", "3", "中線引留金物", "1", "", "", "低圧引留碍子（青）", "1", "GW通りバインド　５８", "1", "M１２", "1", "４５T１", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42", "25SQ", "架空地線", "架空地金物", "2", "アームタイバンド１９０", "2", "１２x１２０", "4", "１２x１００", "2", "中線引留金物", "2", "ねじりストラップ", "4", "低圧引留碍子（青）", "2", "GWグリップ２５", "2", "M１２", "1", "４５T１", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42", "58SQ", "架空地線", "架空地金物", "2", "アームタイバンド１９０", "2", "１２x１２０", "4", "１２x１００", "2", "中線引留金物", "2", "ねじりストラップ", "4", "低圧引留碍子（青）", "2", "GWグリップ５８", "2", "M１２", "1", "４５T１", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43", "25SQ", "架空地線", "架空地金物", "2", "アームタイバンド１９０", "2", "１２x１２０", "3", "１２x１００", "3", "", "", "ねじりストラップ", "2", "低圧引留碍子（青）", "1", "GWグリップ２５", "1", "M１２", "1", "４５T１", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43", "58SQ", "架空地線", "架空地金物", "2", "アームタイバンド１９０", "2", "１２x１２０", "3", "１２x１００", "3", "", "", "ねじりストラップ", "2", "低圧引留碍子（青）", "1", "GWグリップ５８", "1", "M１２", "1", "４５T１", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン18", "10K", "単相変台", "TRバンド（小）", "1", "当て金物　(小）", "1", "足場金物", "3", "自在バンド", "3", "ターミナル　22", "3", "", "", "", "", "ブッシングカバー", "3", "引下げ線カバー", "2", "OO T1", "2", "PD線", "20", "機器取付金物", "2", "補助金物", "2", "１６x１２０", "4", "ノーアームタイバンド", "1", "CV 22SQ 黒", "10", "CV 22SQ 緑", "5", "M１６", "1", "Hヒューズ10K", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン18", "20K", "単相変台", "TRバンド（小）", "1", "当て金物　(小）", "1", "足場金物", "3", "自在バンド", "3", "ターミナル　22", "1", "ターミナル　60", "2", "", "", "ブッシングカバー", "3", "引下げ線カバー", "2", "OO T1", "2", "PD線", "20", "機器取付金物", "2", "補助金物", "2", "１６x１２０", "4", "ノーアームタイバンド", "1", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "M１６", "1", "Hヒューズ20K", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン18", "30K", "単相変台", "TRバンド（小）", "1", "当て金物　(大）", "1", "足場金物", "3", "自在バンド", "3", "ターミナル　22", "1", "ターミナル　60", "2", "", "", "ブッシングカバー", "3", "引下げ線カバー", "2", "OO T1", "2", "PD線", "20", "機器取付金物", "2", "補助金物", "2", "１６x１２０", "4", "ノーアームタイバンド", "1", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "M１６", "1", "Hヒューズ30K", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン18", "50K", "単相変台", "TRバンド（小）", "1", "当て金物　(大）", "1", "足場金物", "3", "自在バンド", "3", "", "", "ターミナル　60", "1", "ターミナル　125", "2", "ブッシングカバー", "3", "引下げ線カバー", "2", "OO T1", "2", "PD線", "20", "機器取付金物", "2", "補助金物", "2", "１６x１２０", "4", "ノーアームタイバンド", "1", "CV 120SQ 黒", "10", "CV 60SQ 緑", "5", "M１６", "1", "Hヒューズ50K", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン18", "100K", "単相変台", "TRバンド（大）", "1", "当て金物　(大）", "1", "足場金物", "3", "自在バンド", "3", "", "", "", "", "ターミナル　125", "5", "ブッシングカバー", "3", "引下げ線カバー", "2", "OO T1", "2", "PD線", "20", "機器取付金物", "2", "補助金物", "2", "１６x１２０", "4", "ノーアームタイバンド", "1", "CV 120SQ 黒", "20", "CV 120SQ 緑", "5", "M１６", "1", "Hヒューズ100K", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン17", "10K", "単相変台", "TRバンド（小）", "1", "当て金物　(小）", "1", "足場金物", "2", "自在バンド", "3", "ターミナル　22", "3", "", "", "", "", "ブッシングカバー", "3", "引下げ線カバー", "2", "OO T1", "2", "PD線", "20", "機器取付金物", "2", "ノーアームタイバンド", "1", "CV 22SQ 黒", "10", "CV 22SQ 緑", "5", "M１６", "1", "Hヒューズ10K", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン17", "20K", "単相変台", "TRバンド（小）", "1", "当て金物　(小）", "1", "足場金物", "2", "自在バンド", "3", "ターミナル　22", "1", "ターミナル　60", "2", "", "", "ブッシングカバー", "3", "引下げ線カバー", "2", "OO T1", "2", "PD線", "20", "機器取付金物", "2", "ノーアームタイバンド", "1", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "M１６", "1", "Hヒューズ20K", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン17", "30K", "単相変台", "TRバンド（小）", "1", "当て金物　(大）", "1", "足場金物", "2", "自在バンド", "3", "ターミナル　22", "1", "ターミナル　60", "2", "", "", "ブッシングカバー", "3", "引下げ線カバー", "2", "OO T1", "2", "PD線", "20", "機器取付金物", "2", "ノーアームタイバンド", "1", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "M１６", "1", "Hヒューズ30K", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン17", "50K", "単相変台", "TRバンド（小）", "1", "当て金物　(大）", "1", "足場金物", "2", "自在バンド", "3", "", "", "ターミナル　60", "1", "ターミナル　125", "2", "ブッシングカバー", "3", "引下げ線カバー", "2", "OO T1", "2", "PD線", "20", "機器取付金物", "2", "ノーアームタイバンド", "1", "CV 120SQ 黒", "10", "CV 60SQ 緑", "5", "M１６", "1", "Hヒューズ50K", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン17", "100K", "単相変台", "TRバンド（大）", "1", "当て金物　(大）", "1", "足場金物", "2", "自在バンド", "3", "", "", "", "", "ターミナル　125", "5", "ブッシングカバー", "3", "引下げ線カバー", "2", "OO T1", "2", "PD線", "20", "機器取付金物", "2", "ノーアームタイバンド", "1", "CV 120SQ 黒", "20", "CV 120SQ 緑", "5", "M１６", "1", "Hヒューズ100K", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン97", "10K", "単相変台", "TRバンド（小）", "1", "当て金物　(小）", "1", "足場金物", "2", "自在バンド", "3", "ターミナル　22", "3", "", "", "", "", "ブッシングカバー", "3", "引下げ線カバー", "2", "OO T1", "2", "PD線", "20", "機器取付金物", "2", "ノーアームタイバンド", "1", "CV 22SQ 黒", "10", "CV 22SQ 緑", "5", "M１６", "1", "アーム連結金物", "1", "Hヒューズ10K", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン97", "20K", "単相変台", "TRバンド（小）", "1", "当て金物　(小）", "1", "足場金物", "2", "自在バンド", "3", "ターミナル　22", "1", "ターミナル　60", "2", "", "", "ブッシングカバー", "3", "引下げ線カバー", "2", "OO T1", "2", "PD線", "20", "機器取付金物", "2", "ノーアームタイバンド", "1", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "M１６", "1", "アーム連結金物", "1", "Hヒューズ20K", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン97", "30K", "単相変台", "TRバンド（小）", "1", "当て金物　(大）", "1", "足場金物", "2", "自在バンド", "3", "ターミナル　22", "1", "ターミナル　60", "2", "", "", "ブッシングカバー", "3", "引下げ線カバー", "2", "OO T1", "2", "PD線", "20", "機器取付金物", "2", "ノーアームタイバンド", "1", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "M１６", "1", "アーム連結金物", "1", "Hヒューズ30K", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン97", "50K", "単相変台", "TRバンド（小）", "1", "当て金物　(大）", "1", "足場金物", "2", "自在バンド", "3", "", "", "ターミナル　60", "1", "ターミナル　125", "2", "ブッシングカバー", "3", "引下げ線カバー", "2", "OO T1", "2", "PD線", "20", "機器取付金物", "2", "ノーアームタイバンド", "1", "CV 120SQ 黒", "10", "CV 60SQ 緑", "5", "M１６", "1", "アーム連結金物", "1", "Hヒューズ50K", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン97", "100K", "単相変台", "TRバンド（大）", "1", "当て金物　(大）", "1", "足場金物", "2", "自在バンド", "3", "", "", "", "", "ターミナル　125", "5", "ブッシングカバー", "3", "引下げ線カバー", "2", "OO T1", "2", "PD線", "20", "機器取付金物", "2", "ノーアームタイバンド", "1", "CV 120SQ 黒", "20", "CV 120SQ 緑", "5", "M１６", "1", "アーム連結金物", "1", "Hヒューズ100K", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン18", "10k+10k", "灯動変台", "TRバンド（小）", "1", "当て金物　(小）", "2", "", "", "自在バンド", "3", "ターミナル　22", "6", "", "", "", "", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "CV 22SQ 黒", "10", "CV 22SQ 緑", "5", "", "", "", "", "", "", "", "", "", "", "三叉管", "1", "Hヒューズ10K", "3", "", "", "", "", "", ""], ["パターン18", "20k+10k", "灯動変台", "TRバンド（小）", "1", "当て金物　(小）", "2", "", "", "自在バンド", "3", "ターミナル　22", "4", "ターミナル　60", "2", "", "", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "CV 22SQ 黒", "10", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "", "", "", "", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ10K", "1", "Hヒューズ20K", "2", "", "", "", ""], ["パターン18", "30k+10k", "灯動変台", "TRバンド（小）", "1", "当て金物　(小）", "1", "当て金物　(大）", "1", "自在バンド", "4", "ターミナル　22", "4", "ターミナル　60", "2", "", "", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "CV 22SQ 黒", "10", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "", "", "", "", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ10K", "1", "Hヒューズ30K", "2", "", "", "", ""], ["パターン18", "50k+10k", "灯動変台", "TRバンド（小）", "1", "当て金物　(小）", "1", "当て金物　(大）", "1", "自在バンド", "4", "ターミナル　22", "3", "ターミナル　60", "1", "ターミナル　125", "2", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "CV 22SQ 黒", "10", "", "", "", "", "CV 60SQ 緑", "5", "CV 120SQ 黒", "20", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ10K", "1", "Hヒューズ50K", "2", "", "", "", ""], ["パターン18", "100k+10k", "灯動変台", "TRバンド（大）", "1", "当て金物　(小）", "1", "当て金物　(大）", "1", "自在バンド", "4", "ターミナル　22", "3", "", "", "ターミナル　125", "5", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "CV 22SQ 黒", "10", "", "", "", "", "", "", "CV 120SQ 黒", "20", "CV 120SQ 緑", "5", "M１６", "1", "三叉管", "1", "Hヒューズ10K", "1", "Hヒューズ100K", "2", "", "", "", ""], ["パターン18", "20k+20k", "灯動変台", "TRバンド（小）", "1", "当て金物　(小）", "2", "", "", "自在バンド", "3", "ターミナル　22", "1", "ターミナル　60", "5", "", "", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "", "", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "", "", "", "", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ20K", "3", "", "", "", "", "", ""], ["パターン18", "30k+20k", "灯動変台", "TRバンド（小）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "ターミナル　22", "1", "ターミナル　60", "5", "", "", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "", "", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "", "", "", "", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ30K", "2", "Hヒューズ20K", "1", "", "", "", ""], ["パターン18", "30k+30k", "灯動変台", "TRバンド（小）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "ターミナル　22", "1", "ターミナル　60", "5", "", "", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "", "", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "", "", "", "", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ30K", "3", "", "", "", "", "", ""], ["パターン18", "50k+20k", "灯動変台", "TRバンド（小）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "", "", "ターミナル　60", "4", "ターミナル　125", "2", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "", "", "", "", "CV60SQ 黒", "10", "CV 60SQ 緑", "5", "CV 120SQ 黒", "20", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ20K", "1", "Hヒューズ50K", "2", "", "", "", ""], ["パターン18", "50k+30k", "灯動変台", "TRバンド（小）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "", "", "ターミナル　60", "4", "ターミナル　125", "2", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "", "", "", "", "CV60SQ 黒", "10", "CV 60SQ 緑", "5", "CV 120SQ 黒", "20", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ50K", "2", "Hヒューズ30K", "1", "", "", "", ""], ["パターン18", "50k+50k", "灯動変台", "TRバンド（小）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "", "", "ターミナル　60", "1", "ターミナル　125", "5", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "", "", "", "", "", "", "CV 60SQ 緑", "5", "CV 120SQ 黒", "20", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ50K", "3", "", "", "", "", "", ""], ["パターン18", "100k+20k", "灯動変台", "TRバンド（大）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "4", "", "", "ターミナル　60", "3", "ターミナル　125", "5", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "", "", "", "", "CV60SQ 黒", "10", "", "", "CV 120SQ 黒", "20", "CV 120SQ 緑", "5", "M１６", "1", "三叉管", "1", "Hヒューズ100K", "2", "Hヒューズ20K", "1", "", "", "", ""], ["パターン18", "100k+30k", "灯動変台", "TRバンド（大）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "4", "", "", "ターミナル　60", "3", "ターミナル　125", "5", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "", "", "", "", "CV60SQ 黒", "10", "", "", "CV 120SQ 黒", "20", "CV 120SQ 緑", "5", "M１６", "1", "三叉管", "1", "Hヒューズ100K", "2", "Hヒューズ30K", "1", "", "", "", ""], ["パターン18", "100+50k", "灯動変台", "TRバンド（大）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "", "", "", "", "ターミナル　125", "8", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "", "", "", "", "", "", "", "", "CV 120SQ 黒", "20", "CV 120SQ 緑", "5", "M１６", "1", "三叉管", "1", "Hヒューズ100K", "2", "Hヒューズ50K", "1", "", "", "", ""], ["パターン18", "100k+100k", "灯動変台", "TRバンド（大）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "", "", "", "", "ターミナル　125", "9", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "", "", "", "", "", "", "", "", "CV 120SQ 黒", "20", "CV 120SQ 緑", "5", "M１６", "1", "三叉管", "1", "Hヒューズ100K", "3", "", "", "", "", "", ""], ["パターン98", "10k+10k", "灯動変台", "TRバンド（小）", "1", "当て金物　(小）", "2", "", "", "自在バンド", "3", "ターミナル　22", "6", "", "", "", "", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "CV 22SQ 黒", "10", "CV 22SQ 緑", "5", "", "", "", "", "", "", "", "", "", "", "三叉管", "1", "Hヒューズ10K", "3", "", "", "", "", "", ""], ["パターン98", "20k+10k", "灯動変台", "TRバンド（小）", "1", "当て金物　(小）", "2", "", "", "自在バンド", "3", "ターミナル　22", "4", "ターミナル　60", "2", "", "", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "CV 22SQ 黒", "10", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "", "", "", "", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ10K", "1", "Hヒューズ20K", "2", "", "", "", ""], ["パターン98", "30k+10k", "灯動変台", "TRバンド（小）", "1", "当て金物　(小）", "1", "当て金物　(大）", "1", "自在バンド", "4", "ターミナル　22", "4", "ターミナル　60", "2", "", "", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "CV 22SQ 黒", "10", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "", "", "", "", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ10K", "1", "Hヒューズ30K", "2", "", "", "", ""], ["パターン98", "50k+10k", "灯動変台", "TRバンド（小）", "1", "当て金物　(小）", "1", "当て金物　(大）", "1", "自在バンド", "4", "ターミナル　22", "3", "ターミナル　60", "1", "ターミナル　125", "2", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "CV 22SQ 黒", "10", "", "", "", "", "CV 60SQ 緑", "5", "CV 120SQ 黒", "20", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ10K", "1", "Hヒューズ50K", "2", "", "", "", ""], ["パターン98", "100k+10k", "灯動変台", "TRバンド（大）", "1", "当て金物　(小）", "1", "当て金物　(大）", "1", "自在バンド", "4", "ターミナル　22", "3", "", "", "ターミナル　125", "5", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "CV 22SQ 黒", "10", "", "", "", "", "", "", "CV 120SQ 黒", "20", "CV 120SQ 緑", "5", "M１６", "1", "三叉管", "1", "Hヒューズ10K", "1", "Hヒューズ100K", "2", "", "", "", ""], ["パターン98", "20k+20k", "灯動変台", "TRバンド（小）", "1", "当て金物　(小）", "2", "", "", "自在バンド", "3", "ターミナル　22", "1", "ターミナル　60", "5", "", "", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "", "", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "", "", "", "", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ20K", "3", "", "", "", "", "", ""], ["パターン98", "30k+20k", "灯動変台", "TRバンド（小）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "ターミナル　22", "1", "ターミナル　60", "5", "", "", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "", "", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "", "", "", "", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ30K", "2", "Hヒューズ20K", "1", "", "", "", ""], ["パターン98", "30k+30k", "灯動変台", "TRバンド（小）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "ターミナル　22", "1", "ターミナル　60", "5", "", "", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "", "", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "", "", "", "", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ30K", "3", "", "", "", "", "", ""], ["パターン98", "50k+20k", "灯動変台", "TRバンド（小）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "", "", "ターミナル　60", "4", "ターミナル　125", "2", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "", "", "", "", "CV60SQ 黒", "10", "CV 60SQ 緑", "5", "CV 120SQ 黒", "20", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ20K", "1", "Hヒューズ50K", "2", "", "", "", ""], ["パターン98", "50k+30k", "灯動変台", "TRバンド（小）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "", "", "ターミナル　60", "4", "ターミナル　125", "2", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "", "", "", "", "CV60SQ 黒", "10", "CV 60SQ 緑", "5", "CV 120SQ 黒", "20", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ50K", "2", "Hヒューズ30K", "1", "", "", "", ""], ["パターン98", "50k+50k", "灯動変台", "TRバンド（小）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "", "", "ターミナル　60", "1", "ターミナル　125", "5", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "", "", "", "", "", "", "CV 60SQ 緑", "5", "CV 120SQ 黒", "20", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ50K", "3", "", "", "", "", "", ""], ["パターン98", "100k+20k", "灯動変台", "TRバンド（大）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "4", "", "", "ターミナル　60", "3", "ターミナル　125", "5", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "", "", "", "", "CV60SQ 黒", "10", "", "", "CV 120SQ 黒", "20", "CV 120SQ 緑", "5", "M１６", "1", "三叉管", "1", "Hヒューズ100K", "2", "Hヒューズ20K", "1", "", "", "", ""], ["パターン98", "100k+30k", "灯動変台", "TRバンド（大）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "4", "", "", "ターミナル　60", "3", "ターミナル　125", "5", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "", "", "", "", "CV60SQ 黒", "10", "", "", "CV 120SQ 黒", "20", "CV 120SQ 緑", "5", "M１６", "1", "三叉管", "1", "Hヒューズ100K", "2", "Hヒューズ30K", "1", "", "", "", ""], ["パターン98", "100+50k", "灯動変台", "TRバンド（大）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "", "", "", "", "ターミナル　125", "8", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "", "", "", "", "", "", "", "", "CV 120SQ 黒", "20", "CV 120SQ 緑", "5", "M１６", "1", "三叉管", "1", "Hヒューズ100K", "2", "Hヒューズ50K", "1", "", "", "", ""], ["パターン98", "100k+100k", "灯動変台", "TRバンド（大）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "", "", "", "", "ターミナル　125", "9", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "3", "機器取付金物", "3", "ノーアームタイバンド", "1", "補助金物", "2", "１６x１２０", "4", "", "", "", "", "", "", "", "", "CV 120SQ 黒", "20", "CV 120SQ 緑", "5", "M１６", "1", "三叉管", "1", "Hヒューズ100K", "3", "", "", "", "", "", ""], ["パターン17", "10k+10k", "灯動変台", "TRバンド（小）", "1", "当て金物　(小）", "2", "", "", "自在バンド", "3", "ターミナル　22", "6", "", "", "", "", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "CV 22SQ 黒", "10", "CV 22SQ 緑", "5", "", "", "", "", "", "", "", "", "", "", "", "", "Hヒューズ10K", "3", "", "", "", "", "", "", "", "", "", ""], ["パターン17", "20k+10k", "灯動変台", "TRバンド（小）", "1", "当て金物　(小）", "2", "", "", "自在バンド", "3", "ターミナル　22", "4", "ターミナル　60", "2", "", "", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "CV 22SQ 黒", "10", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "", "", "", "", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ10K", "1", "Hヒューズ20K", "2", "", "", "", "", "", "", "", ""], ["パターン17", "30k+10k", "灯動変台", "TRバンド（小）", "1", "当て金物　(小）", "1", "当て金物　(大）", "1", "自在バンド", "4", "ターミナル　22", "4", "ターミナル　60", "2", "", "", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "CV 22SQ 黒", "10", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "", "", "", "", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ10K", "1", "Hヒューズ30K", "2", "", "", "", "", "", "", "", ""], ["パターン17", "50k+10k", "灯動変台", "TRバンド（小）", "1", "当て金物　(小）", "1", "当て金物　(大）", "1", "自在バンド", "4", "ターミナル　22", "3", "ターミナル　60", "1", "ターミナル　125", "2", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "CV 22SQ 黒", "10", "", "", "", "", "CV 60SQ 緑", "5", "CV 120SQ 黒", "20", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ10K", "1", "Hヒューズ50K", "2", "", "", "", "", "", "", "", ""], ["パターン17", "100k+10k", "灯動変台", "TRバンド（大）", "1", "当て金物　(小）", "1", "当て金物　(大）", "1", "自在バンド", "4", "ターミナル　22", "3", "", "", "ターミナル　125", "5", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "CV 22SQ 黒", "10", "", "", "", "", "", "", "CV 120SQ 黒", "20", "CV 120SQ 緑", "5", "M１６", "1", "三叉管", "1", "Hヒューズ10K", "1", "Hヒューズ100K", "2", "", "", "", "", "", "", "", ""], ["パターン17", "20k+20k", "灯動変台", "TRバンド（小）", "1", "当て金物　(小）", "2", "", "", "自在バンド", "3", "ターミナル　22", "1", "ターミナル　60", "5", "", "", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "", "", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "", "", "", "", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ20K", "3", "", "", "", "", "", "", "", "", "", ""], ["パターン17", "30k+20k", "灯動変台", "TRバンド（小）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "ターミナル　22", "1", "ターミナル　60", "5", "", "", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "", "", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "", "", "", "", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ30K", "2", "Hヒューズ20K", "1", "", "", "", "", "", "", "", ""], ["パターン17", "30k+30k", "灯動変台", "TRバンド（小）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "ターミナル　22", "1", "ターミナル　60", "5", "", "", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "", "", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "", "", "", "", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ30K", "3", "", "", "", "", "", "", "", "", "", ""], ["パターン17", "50k+20k", "灯動変台", "TRバンド（小）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "", "", "ターミナル　60", "4", "ターミナル　125", "2", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "", "", "", "", "CV60SQ 黒", "10", "CV 60SQ 緑", "5", "CV 120SQ 黒", "20", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ20K", "1", "Hヒューズ50K", "2", "", "", "", "", "", "", "", ""], ["パターン17", "50k+30k", "灯動変台", "TRバンド（小）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "", "", "ターミナル　60", "4", "ターミナル　125", "2", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "", "", "", "", "CV60SQ 黒", "10", "CV 60SQ 緑", "5", "CV 120SQ 黒", "20", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ50K", "2", "Hヒューズ30K", "1", "", "", "", "", "", "", "", ""], ["パターン17", "50k+50k", "灯動変台", "TRバンド（小）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "", "", "ターミナル　60", "1", "ターミナル　125", "5", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "", "", "", "", "", "", "CV 60SQ 緑", "5", "CV 120SQ 黒", "20", "", "", "M１６", "1", "三叉管", "1", "Hヒューズ50K", "3", "", "", "", "", "", "", "", "", "", ""], ["パターン17", "100k+20k", "灯動変台", "TRバンド（大）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "4", "", "", "ターミナル　60", "3", "ターミナル　125", "5", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "", "", "", "", "CV60SQ 黒", "10", "", "", "CV 120SQ 黒", "20", "CV 120SQ 緑", "5", "M１６", "1", "三叉管", "1", "Hヒューズ100K", "2", "Hヒューズ20K", "1", "", "", "", "", "", "", "", ""], ["パターン17", "100k+30k", "灯動変台", "TRバンド（大）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "4", "", "", "ターミナル　60", "3", "ターミナル　125", "5", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "", "", "", "", "CV60SQ 黒", "10", "", "", "CV 120SQ 黒", "20", "CV 120SQ 緑", "5", "M１６", "1", "三叉管", "1", "Hヒューズ100K", "2", "Hヒューズ30K", "1", "", "", "", "", "", "", "", ""], ["パターン17", "100+50k", "灯動変台", "TRバンド（大）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "", "", "", "", "ターミナル　125", "8", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "", "", "", "", "", "", "", "", "CV 120SQ 黒", "20", "CV 120SQ 緑", "5", "M１６", "1", "三叉管", "1", "Hヒューズ100K", "2", "Hヒューズ50K", "1", "", "", "", "", "", "", "", ""], ["パターン17", "100k+100k", "灯動変台", "TRバンド（大）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "", "", "", "", "ターミナル　125", "9", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "", "", "", "", "", "", "", "", "CV 120SQ 黒", "20", "CV 120SQ 緑", "5", "M１６", "1", "三叉管", "1", "Hヒューズ100K", "3", "", "", "", "", "", "", "", "", "", ""], ["パターン97", "10k+10k", "灯動変台", "TRバンド（小）", "1", "当て金物　(小）", "2", "", "", "自在バンド", "3", "ターミナル　22", "6", "", "", "", "", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "CV 22SQ 黒", "10", "CV 22SQ 緑", "5", "", "", "", "", "", "", "", "", "M１６", "1", "アーム連結金物", "1", "三叉管", "1", "Hヒューズ10K", "3", "", "", "", "", "", "", "", ""], ["パターン97", "20k+10k", "灯動変台", "TRバンド（小）", "1", "当て金物　(小）", "2", "", "", "自在バンド", "3", "ターミナル　22", "4", "ターミナル　60", "2", "", "", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "CV 22SQ 黒", "10", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "", "", "", "", "", "", "M１６", "1", "アーム連結金物", "1", "三叉管", "1", "Hヒューズ10K", "1", "Hヒューズ20K", "2", "", "", "", "", "", ""], ["パターン97", "30k+10k", "灯動変台", "TRバンド（小）", "1", "当て金物　(小）", "1", "当て金物　(大）", "1", "自在バンド", "4", "ターミナル　22", "4", "ターミナル　60", "2", "", "", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "CV 22SQ 黒", "10", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "", "", "", "", "", "", "M１６", "1", "アーム連結金物", "1", "三叉管", "1", "Hヒューズ10K", "1", "Hヒューズ30K", "2", "", "", "", "", "", ""], ["パターン97", "50k+10k", "灯動変台", "TRバンド（小）", "1", "当て金物　(小）", "1", "当て金物　(大）", "1", "自在バンド", "4", "ターミナル　22", "3", "ターミナル　60", "1", "ターミナル　125", "2", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "CV 22SQ 黒", "10", "", "", "", "", "CV 60SQ 緑", "5", "CV 120SQ 黒", "20", "", "", "M１６", "1", "アーム連結金物", "1", "三叉管", "1", "Hヒューズ10K", "1", "Hヒューズ50K", "2", "", "", "", "", "", ""], ["パターン97", "100k+10k", "灯動変台", "TRバンド（大）", "1", "当て金物　(小）", "1", "当て金物　(大）", "1", "自在バンド", "4", "ターミナル　22", "3", "", "", "ターミナル　125", "5", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "CV 22SQ 黒", "10", "", "", "", "", "", "", "CV 120SQ 黒", "20", "CV 120SQ 緑", "5", "M１６", "1", "アーム連結金物", "1", "三叉管", "1", "Hヒューズ10K", "1", "Hヒューズ100K", "2", "", "", "", "", "", ""], ["パターン97", "20k+20k", "灯動変台", "TRバンド（小）", "1", "当て金物　(小）", "2", "", "", "自在バンド", "3", "ターミナル　22", "1", "ターミナル　60", "5", "", "", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "", "", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "", "", "", "", "", "", "M１６", "1", "アーム連結金物", "1", "三叉管", "1", "Hヒューズ20K", "3", "", "", "", "", "", "", "", ""], ["パターン97", "30k+20k", "灯動変台", "TRバンド（小）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "ターミナル　22", "1", "ターミナル　60", "5", "", "", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "", "", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "", "", "", "", "", "", "M１６", "1", "アーム連結金物", "1", "三叉管", "1", "Hヒューズ30K", "2", "Hヒューズ20K", "1", "", "", "", "", "", ""], ["パターン97", "30k+30k", "灯動変台", "TRバンド（小）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "ターミナル　22", "1", "ターミナル　60", "5", "", "", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "", "", "CV 22SQ 緑", "5", "CV60SQ 黒", "10", "", "", "", "", "", "", "M１６", "1", "アーム連結金物", "1", "三叉管", "1", "Hヒューズ30K", "3", "", "", "", "", "", "", "", ""], ["パターン97", "50k+20k", "灯動変台", "TRバンド（小）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "", "", "ターミナル　60", "4", "ターミナル　125", "2", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "", "", "", "", "CV60SQ 黒", "10", "CV 60SQ 緑", "5", "CV 120SQ 黒", "20", "", "", "M１６", "1", "アーム連結金物", "1", "三叉管", "1", "Hヒューズ20K", "1", "Hヒューズ50K", "2", "", "", "", "", "", ""], ["パターン97", "50k+30k", "灯動変台", "TRバンド（小）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "", "", "ターミナル　60", "4", "ターミナル　125", "2", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "", "", "", "", "CV60SQ 黒", "10", "CV 60SQ 緑", "5", "CV 120SQ 黒", "20", "", "", "M１６", "1", "アーム連結金物", "1", "三叉管", "1", "Hヒューズ50K", "2", "Hヒューズ30K", "1", "", "", "", "", "", ""], ["パターン97", "50k+50k", "灯動変台", "TRバンド（小）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "", "", "ターミナル　60", "1", "ターミナル　125", "5", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "", "", "", "", "", "", "CV 60SQ 緑", "5", "CV 120SQ 黒", "20", "", "", "M１６", "1", "アーム連結金物", "1", "三叉管", "1", "Hヒューズ50K", "3", "", "", "", "", "", "", "", ""], ["パターン97", "100k+20k", "灯動変台", "TRバンド（大）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "4", "", "", "ターミナル　60", "3", "ターミナル　125", "5", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "", "", "", "", "CV60SQ 黒", "10", "", "", "CV 120SQ 黒", "20", "CV 120SQ 緑", "5", "M１６", "1", "アーム連結金物", "1", "三叉管", "1", "Hヒューズ100K", "2", "Hヒューズ20K", "1", "", "", "", "", "", ""], ["パターン97", "100k+30k", "灯動変台", "TRバンド（大）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "4", "", "", "ターミナル　60", "3", "ターミナル　125", "5", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "", "", "", "", "CV60SQ 黒", "10", "", "", "CV 120SQ 黒", "20", "CV 120SQ 緑", "5", "M１６", "1", "アーム連結金物", "1", "三叉管", "1", "Hヒューズ100K", "2", "Hヒューズ30K", "1", "", "", "", "", "", ""], ["パターン97", "100+50k", "灯動変台", "TRバンド（大）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "", "", "", "", "ターミナル　125", "8", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "", "", "", "", "", "", "", "", "CV 120SQ 黒", "20", "CV 120SQ 緑", "5", "M１６", "1", "アーム連結金物", "1", "三叉管", "1", "Hヒューズ100K", "2", "Hヒューズ50K", "1", "", "", "", "", "", ""], ["パターン97", "100k+100k", "灯動変台", "TRバンド（大）", "1", "", "", "当て金物　(大）", "2", "自在バンド", "3", "", "", "", "", "ターミナル　125", "9", "ブッシングカバー", "6", "引下げ線カバー", "3", "OO T1", "3", "PD線", "20", "足場金物", "2", "機器取付金物", "3", "ノーアームタイバンド", "1", "", "", "", "", "", "", "", "", "CV 120SQ 黒", "20", "CV 120SQ 緑", "5", "M１６", "1", "アーム連結金物", "1", "三叉管", "1", "Hヒューズ100K", "3", "", "", "", "", "", "", "", ""], ["パターン21、22", "22SQ", "弱電", "１６x１００", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "アームタイバンド２２０", "1", "アームタイバンド２５０", "1", "ノーアームタイバンド", "1", "通り金物", "1", "22SQ Aグリップ", "2", "青スパイラル", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン21、22", "14SQ", "弱電", "１６x１００", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "アームタイバンド２２０", "1", "アームタイバンド２５０", "1", "ノーアームタイバンド", "1", "通り金物", "1", "14SQ Aグリップ", "2", "青スパイラル", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41、42", "22SQ", "弱電", "直付金物", "2", "丸シンブル", "2", "通り金物", "1", "22SQ Aグリップ", "2", "青スパイラル", "1", "22SQ Aグリップ", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41、42", "14SQ", "弱電", "直付金物", "2", "丸シンブル", "2", "通り金物", "1", "22SQ Aグリップ", "2", "青スパイラル", "1", "14SQ Aグリップ", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11 建替", "25SQ", "高圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "AH通り碍子カバー", "3", "", "", "直線スリーブカバー(小)", "6", "S２５", "6", "縁廻しカバー(小)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11 建替", "58SQ", "高圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "AH通り碍子カバー", "3", "C座", "3", "直線スリーブカバー(小)", "6", "S５８", "6", "縁廻しカバー(小)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11 建替", "120SQ", "高圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "AH通り碍子カバー", "3", "C座", "3", "直線スリーブカバー(中)", "6", "S１２０", "6", "縁廻しカバー(中)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11 建替", "200SQ", "高圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "AH通り碍子カバー", "3", "C座", "3", "直線スリーブカバー(中)", "6", "S２００", "6", "縁廻しカバー(中)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11 建替", "400SQ", "高圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "AH通り碍子カバー", "3", "C座", "3", "直線スリーブカバー(大)", "6", "S４００", "6", "縁廻しカバー(大)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン12 建替", "25SQ", "高圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "12", "クランプ（小）", "6", "AH引留カバー", "6", "OE25通りバインド", "3", "直線スリーブカバー(小)", "6", "S２５", "6", "縁廻しカバー(小)", "1", "分岐カバー(小）", "6", "４T２４", "6", "端末キャップ（小）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン12 建替", "58SQ", "高圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "12", "クランプ（小）", "6", "AH引留カバー", "6", "", "", "直線スリーブカバー(小)", "6", "S５８", "6", "縁廻しカバー(小)", "1", "分岐カバー(小）", "6", "５T５", "6", "端末キャップ（小）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン12 建替", "120SQ", "高圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "12", "クランプ（中）", "6", "AH引留カバー", "6", "", "", "直線スリーブカバー(中)", "6", "S１２０", "6", "縁廻しカバー(中)", "1", "分岐カバー(中）", "6", "６T６", "6", "端末キャップ（中）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン12 建替", "200SQ", "高圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "12", "クランプ（中）", "6", "AH引留カバー", "6", "", "", "直線スリーブカバー(中)", "6", "S２００", "6", "縁廻しカバー(中)", "1", "分岐カバー(中）", "6", "７T７", "6", "端末キャップ（中）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン12 建替", "400SQ", "高圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "12", "クランプ（大）", "6", "AH引留カバー(大）", "6", "", "", "直線スリーブカバー(大)", "6", "S４００", "6", "縁廻しカバー(大)", "1", "分岐カバー(大）", "6", "８T８", "6", "端末キャップ（大）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン13 建替", "25SQ", "高圧", "１６x１２０", "1", "１６x２４０", "1", "１６x３００", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "4", "６００ストラップ", "2", "クランプ（小）", "3", "１２x１２０", "4", "AH引留カバー", "3", "端末キャップ（小）", "3", "直線スリーブカバー(小)", "3", "S２５", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン13 建替", "58SQ", "高圧", "１６x１２０", "1", "１６x２４０", "1", "１６x３００", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "4", "６００ストラップ", "2", "クランプ（小）", "3", "１２x１２０", "4", "AH引留カバー", "3", "端末キャップ（小）", "3", "直線スリーブカバー(小)", "3", "S５８", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン13 建替", "120SQ", "高圧", "１６x１２０", "1", "１６x２４０", "1", "１６x４００", "3", "アームタイ１０００", "1", "アームタイ８００", "1", "抱バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "4", "６００ストラップ", "2", "クランプ（中）", "3", "１２x１２０", "4", "AH引留カバー", "3", "端末キャップ（中）", "3", "直線スリーブカバー(中)", "3", "S１２０", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン13 建替", "200SQ", "高圧", "１６x１２０", "1", "１６x２４０", "1", "１６x４００", "3", "アームタイ１０００", "1", "アームタイ８００", "1", "抱バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "4", "６００ストラップ", "2", "クランプ（中）", "3", "１２x１２０", "4", "AH引留カバー", "3", "端末キャップ（中）", "3", "直線スリーブカバー(中)", "3", "S２００", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン13 建替", "400SQ", "高圧", "１６x１２０", "1", "１６x２４０", "1", "１６x４００", "3", "アームタイ１０００", "1", "アームタイ８００", "1", "抱バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "4", "６００ストラップ", "2", "クランプ（大）", "3", "１２x１２０", "4", "AH引留カバー（大）", "3", "端末キャップ（大）", "3", "直線スリーブカバー(大)", "3", "S４００", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン14 建替", "25SQ", "高圧", "１６x１２０", "3", "単バンド１７５", "2", "１６x２１０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "アームタイバンド２２０", "1", "V金物", "1", "曲がりストラップ", "8", "６００ストラップ", "4", "クランプ（小）", "6", "１２x１２０", "3", "AH引留カバー", "6", "25OE通りバインド", "2", "直線スリーブカバー(小)", "6", "S２５", "6", "縁廻しカバー(小)", "1", "分岐カバー(小）", "6", "４T２４", "6", "端末キャップ（小）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン14 建替", "58SQ", "高圧", "１６x１２０", "3", "単バンド１７５", "2", "１６x２１０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "アームタイバンド２２０", "1", "V金物", "1", "曲がりストラップ", "8", "６００ストラップ", "4", "クランプ（小）", "6", "１２x１２０", "3", "AH引留カバー", "6", "58OE通りバインド", "2", "直線スリーブカバー(小)", "6", "S５８", "6", "縁廻しカバー(小)", "1", "分岐カバー(小）", "6", "５T５", "6", "端末キャップ（小）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン14 建替", "120SQ", "高圧", "１６x１２０", "3", "単バンド１７５", "2", "１６x２１０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "アームタイバンド２２０", "1", "V金物", "1", "曲がりストラップ", "8", "６００ストラップ", "4", "クランプ（中）", "6", "１２x１２０", "3", "AH引留カバー", "6", "120OE通りバインド", "2", "直線スリーブカバー(中)", "6", "S１２０", "6", "縁廻しカバー(中)", "1", "分岐カバー(中）", "6", "６T６", "6", "端末キャップ（中）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン14 建替", "200SQ", "高圧", "１６x１２０", "3", "単バンド１７５", "2", "１６x２１０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "アームタイバンド２２０", "1", "V金物", "1", "曲がりストラップ", "8", "６００ストラップ", "4", "クランプ（中）", "6", "１２x１２０", "3", "AH引留カバー", "6", "200OE通りバインド", "2", "直線スリーブカバー(中)", "6", "S２００", "6", "縁廻しカバー(中)", "1", "分岐カバー(中）", "6", "７T７", "6", "端末キャップ（中）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン14 建替", "400SQ", "高圧", "１６x１２０", "3", "単バンド１７５", "2", "１６x２１０", "1", "アームタイ１０００", "1", "アームタイ８００", "1", "アームタイバンド２２０", "1", "V金物", "1", "曲がりストラップ", "8", "６００ストラップ", "4", "クランプ（大）", "6", "１２x１２０", "3", "AH引留カバー(大）", "6", "400OE通りバインド", "2", "直線スリーブカバー(大)", "6", "S４００", "6", "縁廻しカバー(大)", "1", "分岐カバー(大）", "6", "８T８", "6", "端末キャップ（大）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["アングル　建替", "25SQ", "高圧", "１６x１２０", "3", "１６x２４０", "1", "１６x３００", "1", "アームタイ１０００", "3", "アームタイ８００", "２", "単バンド１７５", "1", "単バンド２２６", "1", "曲がりストラップ", "8", "６００ストラップ", "4", "クランプ（小）", "6", "１２x１２０", "8", "AH引留カバー", "6", "25OE通りバインド", "2", "アームタイバンド２２０", "2", "直線スリーブカバー(小)", "6", "S２５", "6", "縁廻しカバー(小)", "1", "分岐カバー(小）", "6", "４T２４", "6", "端末キャップ（小）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["アングル　建替", "58SQ", "高圧", "１６x１２０", "3", "１６x２４０", "1", "１６x３００", "1", "アームタイ１０００", "3", "アームタイ８００", "２", "単バンド１７５", "1", "単バンド２２６", "1", "曲がりストラップ", "8", "６００ストラップ", "4", "クランプ（小）", "6", "１２x１２０", "8", "AH引留カバー", "6", "58OE通りバインド", "2", "アームタイバンド２２０", "2", "直線スリーブカバー(小)", "6", "S５８", "6", "縁廻しカバー(小)", "1", "分岐カバー(小）", "6", "５T５", "6", "端末キャップ（小）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["抱アングル　建替", "120SQ", "高圧", "１６x１２０", "3", "１６x２４０", "1", "１６x４００", "5", "アームタイ１０００", "3", "アームタイ８００", "２", "抱バンド１７５", "1", "抱バンド２２６", "1", "曲がりストラップ", "8", "６００ストラップ", "4", "クランプ（中）", "6", "１２x１２０", "8", "AH引留カバー", "6", "120OE通りバインド", "2", "アームタイバンド２２０", "2", "直線スリーブカバー(中)", "6", "S１２０", "6", "縁廻しカバー(中)", "1", "分岐カバー(中）", "6", "６T６", "6", "端末キャップ（中）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["抱アングル　建替", "200SQ", "高圧", "１６x１２０", "3", "１６x２４０", "1", "１６x４００", "5", "アームタイ１０００", "3", "アームタイ８００", "２", "抱バンド１７５", "1", "抱バンド２２６", "1", "曲がりストラップ", "8", "６００ストラップ", "4", "クランプ（中）", "6", "１２x１２０", "8", "AH引留カバー", "6", "200OE通りバインド", "2", "アームタイバンド２２０", "2", "直線スリーブカバー(中)", "6", "S２００", "6", "縁廻しカバー(中)", "1", "分岐カバー(中）", "6", "７T７", "6", "端末キャップ（中）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["抱アングル　建替", "400SQ", "高圧", "１６x１２０", "3", "１６x２４０", "1", "１６x４００", "5", "アームタイ１０００", "3", "アームタイ８００", "２", "抱バンド１７５", "1", "抱バンド２２６", "1", "曲がりストラップ", "8", "６００ストラップ", "4", "クランプ（大）", "6", "１２x１２０", "8", "AH引留カバー（大）", "6", "400OE通りバインド", "2", "アームタイバンド２２０", "2", "直線スリーブカバー(大)", "6", "S４００", "6", "縁廻しカバー(大)", "1", "分岐カバー(大）", "6", "８T８", "6", "端末キャップ（大）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン15 建替", "120SQ", "高圧", "１６x１２０", "3", "１６x２４０", "1", "アーームタイ１０００", "2", "アームタイ８００", "2", "単バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "4", "６００ストラップ", "2", "クランプ（中）", "3", "AH引留カバー", "3", "補強金物", "1", "１２x１２０", "2", "直線スリーブカバー(中)", "3", "S１２０", "3", "縁廻しカバー(中)", "1", "端末キャップ（中）", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン15 建替", "200SQ", "高圧", "１６x１２０", "3", "１６x２４０", "1", "アーームタイ１０００", "2", "アームタイ８００", "2", "単バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "4", "６００ストラップ", "2", "クランプ（中）", "3", "AH引留カバー", "3", "補強金物", "1", "１２x１２０", "2", "直線スリーブカバー(中)", "3", "S２００", "3", "縁廻しカバー(中)", "1", "端末キャップ（中）", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["アングル　建替", "120SQ", "高圧", "１６x１２０", "6", "１６x２４０", "1", "アーームタイ１０００", "2", "アームタイ８００", "2", "単バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "8", "単バンド２２６", "1", "６００ストラップ", "4", "クランプ（中）", "6", "AH引留カバー", "6", "120OE通りバインド", "2", "１２x１２０", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["アングル　建替", "200SQ", "高圧", "１６x１２０", "6", "１６x２４０", "1", "アーームタイ１０００", "2", "アームタイ８００", "2", "単バンド１７５", "1", "アームタイバンド２２０", "1", "曲がりストラップ", "8", "単バンド２２６", "1", "６００ストラップ", "4", "クランプ（中）", "6", "AH引留カバー", "6", "200OE通りバインド", "2", "１２x１２０", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン21 建替", "25SQ", "高圧", "１６x２７０", "1", "１６x１５０", "2", "電話バンド", "1", "", "", "AH通り碍子カバー", "3", "単バンド１７５", "1", "直線スリーブカバー(小)", "6", "S２５", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン21 建替", "58SQ", "高圧", "１６x２７０", "1", "１６x１５０", "2", "電話バンド", "1", "C座", "3", "AH通り碍子カバー", "3", "単バンド１７５", "1", "直線スリーブカバー(小)", "6", "S５８", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン21 建替", "120SQ", "高圧", "１６x２７０", "1", "１６x１５０", "1", "TRアームタイバンド", "1", "C座", "3", "AH通り碍子カバー", "3", "抱バンド１７５", "1", "直線スリーブカバー(中)", "6", "S１２０", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン21 建替", "200SQ", "高圧", "１６x２７０", "1", "１６x１５０", "1", "TRアームタイバンド", "1", "C座", "3", "AH通り碍子カバー", "3", "抱バンド１７５", "1", "直線スリーブカバー(中)", "6", "S２００", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン21 建替", "400SQ", "高圧", "１６x２７０", "1", "１６x１５０", "1", "TRアームタイバンド", "1", "C座", "3", "AH通り碍子カバー", "3", "抱バンド１７５", "1", "直線スリーブカバー(大)", "6", "S４００", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン22 建替", "25SQ", "高圧", "１６x２７０", "1", "１６x１５０", "2", "電話バンド", "1", "単バンド１７５", "1", "単バンド１７５", "1", "単バンド１７５", "1", "AH引留カバー", "6", "OE25通りバインド", "3", "１２x１２０", "3", "クランプ（小）", "6", "直線スリーブカバー(小)", "6", "S２５", "6", "縁廻しカバー(小)", "1", "分岐カバー(小）", "6", "４T２４", "6", "端末キャップ（小）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン22 建替", "58SQ", "高圧", "１６x２７０", "1", "１６x１５０", "2", "電話バンド", "1", "単バンド１７５", "1", "単バンド１７５", "1", "単バンド１７５", "1", "AH引留カバー", "6", "", "", "１２x１２０", "3", "クランプ（小）", "6", "直線スリーブカバー(小)", "6", "S５８", "6", "縁廻しカバー(小)", "1", "分岐カバー(小）", "6", "５T５", "6", "端末キャップ（小）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン22 建替", "120SQ", "高圧", "１６x２７０", "1", "１６x１５０", "1", "TRアームタイバンド", "1", "抱バンド１７５", "1", "抱バンド１７５", "1", "抱バンド１７５", "1", "AH引留カバー", "6", "", "", "１２x１２０", "3", "クランプ（中）", "6", "直線スリーブカバー(中)", "6", "S１２０", "6", "縁廻しカバー(中)", "1", "分岐カバー(中）", "6", "６T６", "6", "端末キャップ（中）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン22 建替", "200SQ", "高圧", "１６x２７０", "1", "１６x１５０", "1", "TRアームタイバンド", "1", "抱バンド１７５", "1", "抱バンド１７５", "1", "抱バンド１７５", "1", "AH引留カバー", "6", "", "", "１２x１２０", "3", "クランプ（中）", "6", "直線スリーブカバー(中)", "6", "S２００", "6", "縁廻しカバー(中)", "1", "分岐カバー(中）", "6", "７T７", "6", "端末キャップ（中）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン22 建替", "400SQ", "高圧", "１６x２７０", "1", "１６x１５０", "1", "TRアームタイバンド", "1", "抱バンド１７５", "1", "抱バンド１７５", "1", "抱バンド１７５", "1", "AH引留カバー(大）", "6", "", "", "１２x１２０", "3", "クランプ（大）", "6", "直線スリーブカバー(大)", "6", "S４００", "6", "縁廻しカバー(大)", "1", "分岐カバー(大）", "6", "８T８", "6", "端末キャップ（大）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン23 建替", "25SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１５０", "1", "１２x１２０", "4", "単バンド１７５", "1", "曲がりストラップ", "6", "クランプ（小）", "3", "AH引留カバー", "3", "ねじりストラップ", "2", "丸シンブル", "1", "１２x１００", "1", "電話バンド", "1", "TRアームタイバンド", "1", "端末キャップ（小）", "3", "直線スリーブカバー(小)", "3", "S２５", "3", "縁廻しカバー(小)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン23 建替", "58SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１５０", "1", "１２x１２０", "4", "単バンド１７５", "1", "曲がりストラップ", "6", "クランプ（小）", "3", "AH引留カバー", "3", "ねじりストラップ", "2", "丸シンブル", "1", "１２x１００", "1", "電話バンド", "1", "TRアームタイバンド", "1", "端末キャップ（小）", "3", "直線スリーブカバー(小)", "3", "S５８", "3", "縁廻しカバー(小)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン23 建替", "120SQ", "高圧", "１６x４００", "3", "", "", "１６x１５０", "1", "１２x１２０", "4", "抱バンド１７５", "1", "曲がりストラップ", "6", "クランプ（中）", "3", "AH引留カバー", "3", "ねじりストラップ", "2", "丸シンブル", "1", "１２x１００", "1", "TRアームタイバンド", "1", "", "", "端末キャップ（中）", "3", "直線スリーブカバー(中)", "3", "S１２０", "3", "縁廻しカバー(中)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン23 建替", "200SQ", "高圧", "１６x４００", "3", "", "", "１６x１５０", "1", "１２x１２０", "4", "抱バンド１７５", "1", "曲がりストラップ", "6", "クランプ（中）", "3", "AH引留カバー", "3", "ねじりストラップ", "2", "丸シンブル", "1", "１２x１００", "1", "TRアームタイバンド", "1", "", "", "端末キャップ（中）", "3", "直線スリーブカバー(中)", "3", "S２００", "3", "縁廻しカバー(中)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン23 建替", "400SQ", "高圧", "１６x４００", "3", "", "", "１６x１５０", "1", "１２x１２０", "4", "抱バンド１７５", "1", "曲がりストラップ", "6", "クランプ（大）", "3", "AH引留カバー（大）", "3", "ねじりストラップ", "2", "丸シンブル", "1", "１２x１００", "1", "TRアームタイバンド", "1", "", "", "端末キャップ（大）", "3", "直線スリーブカバー(大)", "3", "S４００", "3", "縁廻しカバー(大)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41 建替", "25SQ", "高圧", "直付金物", "3", "AH通り碍子カバー", "3", "直線スリーブカバー(小)", "6", "S２５", "6", "縁廻しカバー(小)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41 建替", "58SQ", "高圧", "直付金物", "3", "AH通り碍子カバー", "3", "直線スリーブカバー(小)", "6", "S５８", "6", "縁廻しカバー(小)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41 建替", "120SQ", "高圧", "直付金物", "3", "AH通り碍子カバー", "3", "直線スリーブカバー(中)", "6", "S１２０", "6", "縁廻しカバー(中)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41 建替", "200SQ", "高圧", "直付金物", "3", "AH通り碍子カバー", "3", "直線スリーブカバー(中)", "6", "S２００", "6", "縁廻しカバー(中)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41 建替", "400SQ", "高圧", "直付金物", "3", "AH通り碍子カバー", "3", "直線スリーブカバー(大)", "6", "S４００", "6", "縁廻しカバー(大)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42 建替", "25SQ", "高圧", "直付金物", "9", "１２x１２０", "6", "ねじりストラップ", "12", "クランプ（小）", "6", "AH引留カバー", "6", "OE25通りバインド", "3", "直線スリーブカバー(小)", "6", "S２５", "6", "縁廻しカバー(小)", "1", "分岐カバー(小）", "6", "４T２４", "6", "端末キャップ（小）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42 建替", "58SQ", "高圧", "直付金物", "6", "１２x１２０", "6", "ねじりストラップ", "12", "クランプ（小）", "6", "AH引留カバー", "6", "", "", "直線スリーブカバー(小)", "6", "S５８", "6", "縁廻しカバー(小)", "1", "分岐カバー(小）", "6", "５T５", "6", "端末キャップ（小）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42 建替", "120SQ", "高圧", "直付金物", "6", "１２x１２０", "6", "ねじりストラップ", "12", "クランプ（中）", "6", "AH引留カバー", "6", "", "", "直線スリーブカバー(中)", "6", "S１２０", "6", "縁廻しカバー(中)", "1", "分岐カバー(中）", "6", "６T６", "6", "端末キャップ（中）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42 建替", "200SQ", "高圧", "直付金物", "6", "１２x１２０", "6", "ねじりストラップ", "12", "クランプ（中）", "6", "AH引留カバー", "6", "", "", "直線スリーブカバー(中)", "6", "S２００", "6", "縁廻しカバー(中)", "1", "分岐カバー(中）", "6", "７T７", "6", "端末キャップ（中）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42 建替", "400SQ", "高圧", "直付金物", "6", "１２x１２０", "6", "ねじりストラップ", "12", "クランプ（大）", "6", "AH引留カバー(大）", "6", "", "", "直線スリーブカバー(大)", "6", "S４００", "6", "縁廻しカバー(大)", "1", "分岐カバー(大）", "6", "８T８", "6", "端末キャップ（大）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43 建替", "25SQ", "高圧", "直付金物", "3", "１２x１２０", "3", "ねじりストラップ", "6", "クランプ（小）", "3", "AH引留カバー", "3", "端末キャップ（小）", "3", "直線スリーブカバー(小)", "3", "S２５", "3", "縁廻しカバー(小)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43 建替", "58SQ", "高圧", "直付金物", "3", "１２x１２０", "3", "ねじりストラップ", "6", "クランプ（小）", "3", "AH引留カバー", "3", "端末キャップ（小）", "3", "直線スリーブカバー(小)", "3", "S５８", "3", "縁廻しカバー(小)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43 建替", "120SQ", "高圧", "直付金物", "3", "１２x１２０", "3", "ねじりストラップ", "6", "クランプ（中）", "3", "AH引留カバー", "3", "端末キャップ（中）", "3", "直線スリーブカバー(中)", "3", "S１２０", "3", "縁廻しカバー(中)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43 建替", "200SQ", "高圧", "直付金物", "3", "１２x１２０", "3", "ねじりストラップ", "6", "クランプ（中）", "3", "AH引留カバー", "3", "端末キャップ（中）", "3", "直線スリーブカバー(中)", "3", "S２００", "3", "縁廻しカバー(中)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43 建替", "400SQ", "高圧", "直付金物", "3", "１２x１２０", "3", "ねじりストラップ", "6", "クランプ（大）", "3", "AH引留カバー(大）", "3", "端末キャップ（大）", "3", "直線スリーブカバー(大)", "3", "S４００", "3", "縁廻しカバー(大)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン51 建替", "25SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "AH通り碍子カバー", "3", "単バンド１７５", "1", "直線スリーブカバー(小)", "6", "S２５", "6", "縁廻しカバー(小)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン51 建替", "58SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "AH通り碍子カバー", "3", "単バンド１７５", "1", "直線スリーブカバー(小)", "6", "S５８", "6", "縁廻しカバー(小)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン51 建替", "120SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "", "", "AH通り碍子カバー", "3", "単バンド１７５", "1", "直線スリーブカバー(中)", "6", "S１２０", "6", "縁廻しカバー(中)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン51 建替", "200SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "", "", "AH通り碍子カバー", "3", "単バンド１７５", "1", "直線スリーブカバー(中)", "6", "S２００", "6", "縁廻しカバー(中)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン51 建替", "400SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "", "", "AH通り碍子カバー", "3", "単バンド１７５", "1", "直線スリーブカバー(大)", "6", "S４００", "6", "縁廻しカバー(大)", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン52 建替", "25SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "曲がりストラップ", "12", "クランプ（小）", "6", "AH引留カバー", "6", "OE25通りバインド", "", "１２x１２０", "3", "単バンド１７５", "1", "直線スリーブカバー(小)", "6", "S２５", "6", "縁廻しカバー(小)", "1", "分岐カバー(小）", "6", "４T２４", "6", "端末キャップ（小）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン52 建替", "58SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "曲がりストラップ", "12", "クランプ（小）", "6", "AH引留カバー", "6", "", "", "１２x１２０", "3", "単バンド１７５", "1", "直線スリーブカバー(小)", "6", "S５８", "6", "縁廻しカバー(小)", "1", "分岐カバー(小）", "6", "５T５", "6", "端末キャップ（小）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン52 建替", "120SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "", "", "曲がりストラップ", "12", "クランプ（中）", "6", "AH引留カバー", "6", "", "", "１２x１２０", "3", "単バンド１７５", "1", "直線スリーブカバー(中)", "6", "S１２０", "6", "縁廻しカバー(中)", "1", "分岐カバー(中）", "6", "６T６", "6", "端末キャップ（中）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン52 建替", "200SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "", "", "曲がりストラップ", "12", "クランプ（中）", "6", "AH引留カバー", "6", "", "", "１２x１２０", "3", "単バンド１７５", "1", "直線スリーブカバー(中)", "6", "S２００", "6", "縁廻しカバー(中)", "1", "分岐カバー(中）", "6", "７T７", "6", "端末キャップ（中）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン52 建替", "400SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "", "", "曲がりストラップ", "12", "クランプ（大）", "6", "AH引留カバー(大）", "6", "", "", "１２x１２０", "3", "単バンド１７５", "1", "直線スリーブカバー(大)", "6", "S４００", "6", "縁廻しカバー(大)", "1", "分岐カバー(大）", "6", "８T８", "6", "端末キャップ（大）", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン53 建替", "25SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１５０", "2", "単バンド１７５", "1", "１６x１２０", "2", "電話バンド", "1", "１２x１２０", "3", "曲がりストラップ", "6", "クランプ（小）", "3", "AH引留カバー", "3", "ねじりストラップ", "2", "丸シンブル", "1", "１２x１００", "1", "直線スリーブカバー(小)", "3", "S２５", "3", "縁廻しカバー(小)", "1", "端末キャップ（小）", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン53 建替", "58SQ", "高圧", "１６x３００", "1", "１６x１８０", "1", "１６x１５０", "2", "単バンド１７５", "1", "１６x１２０", "2", "電話バンド", "1", "１２x１２０", "3", "曲がりストラップ", "6", "クランプ（小）", "3", "AH引留カバー", "3", "ねじりストラップ", "2", "丸シンブル", "1", "１２x１００", "1", "直線スリーブカバー(小)", "3", "S５８", "3", "縁廻しカバー(小)", "1", "端末キャップ（小）", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン53 建替", "120SQ", "高圧", "１６x４００", "6", "", "", "１６x１５０", "1", "抱バンド１７５", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "１２x１２０", "3", "曲がりストラップ", "6", "クランプ（中）", "3", "AH引留カバー", "3", "ねじりストラップ", "2", "丸シンブル", "1", "１２x１００", "1", "直線スリーブカバー(中)", "3", "S１２０", "3", "縁廻しカバー(中)", "1", "端末キャップ（中）", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン53 建替", "200SQ", "高圧", "１６x４００", "6", "", "", "１６x１５０", "1", "抱バンド１７５", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "１２x１２０", "3", "曲がりストラップ", "6", "クランプ（中）", "3", "AH引留カバー", "3", "ねじりストラップ", "2", "丸シンブル", "1", "１２x１００", "1", "直線スリーブカバー(中)", "3", "S２００", "3", "縁廻しカバー(中)", "1", "端末キャップ（中）", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン53 建替", "400SQ", "高圧", "１６x４００", "6", "", "", "１６x１５０", "1", "抱バンド１７５", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "１２x１２０", "3", "曲がりストラップ", "6", "クランプ（大）", "3", "AH引留カバー（大）", "3", "ねじりストラップ", "2", "丸シンブル", "1", "１２x１００", "1", "直線スリーブカバー(大)", "3", "S４００", "3", "縁廻しカバー(大)", "1", "端末キャップ（大）", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["普通支線", "22SQ", "支線", "22SQ Aグリップ", "3", "22SQ Cグリップ", "1", "", "", "玉碍子(小）", "1", "支線バンド１９０", "1", "支線バンド２２０", "1", "支線バンド２５０", "1", "支線ガード", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["普通支線", "38SQ", "支線", "38SQ Aグリップ", "3", "38SQ Cグリップ", "1", "", "", "玉碍子(小）", "1", "支線バンド１９０", "1", "支線バンド２２０", "1", "支線バンド２５０", "1", "支線ガード", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["普通支線", "55SQ", "支線", "55SQ Aグリップ", "3", "55SQ Cグリップ", "1", "", "", "玉碍子(小）", "1", "支線バンド１９０", "1", "支線バンド２２０", "1", "支線バンド２５０", "1", "支線ガード", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["普通支線", "90SQ", "支線", "90SQ Aグリップ", "1", "90SQ Cグリップ", "1", "90SQ Bグリップ", "2", "玉碍子(大）", "1", "支線バンド１９０　90用", "1", "支線バンド２２０　90用", "1", "支線バンド２５０　90用", "1", "支線ガード", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["耐塩普通支線", "22SQ", "支線", "耐塩22SQ Aグリップ", "3", "耐塩22SQ Cグリップ", "1", "", "", "玉碍子(小）", "1", "支線バンド１９０", "1", "支線バンド２２０", "1", "支線バンド２５０", "1", "支線ガード", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["耐塩普通支線", "38SQ", "支線", "耐塩38SQ Aグリップ", "3", "耐塩38SQ Cグリップ", "1", "", "", "玉碍子(小）", "1", "支線バンド１９０", "1", "支線バンド２２０", "1", "支線バンド２５０", "1", "支線ガード", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["耐塩普通支線", "55SQ", "支線", "耐塩55SQ Aグリップ", "3", "耐塩55SQ Cグリップ", "1", "", "", "玉碍子(小）", "1", "支線バンド１９０", "1", "支線バンド２２０", "1", "支線バンド２５０", "1", "支線ガード", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["耐塩普通支線", "90SQ", "支線", "耐塩90SQ Aグリップ", "1", "耐塩90SQ Cグリップ", "1", "耐塩90SQ Bグリップ", "2", "玉碍子(大）", "1", "支線バンド１９０　90用", "1", "支線バンド２２０　90用", "1", "支線バンド２５０　90用", "1", "支線ガード", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["耐塩共同支線", "22SQ", "支線", "耐塩22SQ Aグリップ", "4", "耐塩22SQ Cグリップ", "2", "", "", "玉碍子(小）", "2", "支線バンド１９０", "2", "支線バンド２２０", "2", "支線バンド２５０", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["耐塩共同支線", "38SQ", "支線", "耐塩38SQ Aグリップ", "4", "耐塩38SQ Cグリップ", "2", "", "", "玉碍子(小）", "2", "支線バンド１９０", "2", "支線バンド２２０", "2", "支線バンド２５０", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["耐塩共同支線", "55SQ", "支線", "耐塩55SQ Aグリップ", "4", "耐塩55SQ Cグリップ", "2", "", "", "玉碍子(小）", "2", "支線バンド１９０", "2", "支線バンド２２０", "2", "支線バンド２５０", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["耐塩共同支線", "90SQ", "支線", "耐塩90SQ Bグリップ", "4", "耐塩90SQ Cグリップ", "2", "", "", "玉碍子(大）", "2", "支線バンド１９０", "2", "支線バンド２２０　90用", "2", "支線バンド２５０　90用", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["共同支線", "22SQ", "支線", "22SQ Aグリップ", "4", "22SQ Cグリップ", "2", "", "", "玉碍子(小）", "2", "支線バンド１９０", "2", "支線バンド２２０", "2", "支線バンド２５０", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["共同支線", "38SQ", "支線", "38SQ Aグリップ", "4", "38SQ Cグリップ", "2", "", "", "玉碍子(小）", "2", "支線バンド１９０", "2", "支線バンド２２０", "2", "支線バンド２５０", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["共同支線", "55SQ", "支線", "55SQ Aグリップ", "4", "55SQ Cグリップ", "2", "", "", "玉碍子(小）", "2", "支線バンド１９０", "2", "支線バンド２２０", "2", "支線バンド２５０", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["共同支線", "90SQ", "支線", "90SQ Bグリップ", "4", "90SQ Cグリップ", "2", "", "", "玉碍子(大）", "2", "支線バンド１９０", "2", "支線バンド２２０　90用", "2", "支線バンド２５０　90用", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11 建替", "25SQ  3L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アーームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "低圧ピン碍子（青）", "1", "低圧ピン碍子（白）", "2", "", "", "25OW通りバインド", "3", "", "", "", "", "低圧直線カバー(小）", "6", "", "", "S25", "6", "", "", "", "", "4T24", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11 建替", "25SQ 4L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アーームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "低圧ピン碍子（青）", "1", "低圧ピン碍子（白）", "2", "低圧ピン碍子（茶）", "1", "25OW通りバインド", "4", "", "", "", "", "低圧直線カバー(小）", "8", "", "", "S25", "8", "", "", "", "", "4T24", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11 建替", "58SQ 3L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アーームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "低圧ピン碍子（青）", "1", "低圧ピン碍子（白）", "2", "", "", "", "", "58OW通りバインド", "3", "", "", "低圧直線カバー(大）", "6", "", "", "S58", "6", "", "", "", "", "5T24", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11 建替", "58SQ 4L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アーームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "低圧ピン碍子（青）", "1", "低圧ピン碍子（白）", "2", "低圧ピン碍子（茶）", "1", "", "", "58OW通りバインド", "4", "", "", "低圧直線カバー(大）", "8", "", "", "S58", "8", "", "", "", "", "5T24", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11 建替", "58 25SQ 3L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アーームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "低圧ピン碍子（青）", "1", "低圧ピン碍子（白）", "2", "", "", "25OW通りバインド", "1", "58OW通りバインド", "2", "", "", "低圧直線カバー(大）", "4", "低圧直線カバー(小）", "2", "S58", "4", "S25", "2", "", "", "5T24", "2", "4T24", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11 建替", "58 25SQ 4L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アーームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "低圧ピン碍子（青）", "1", "低圧ピン碍子（白）", "2", "低圧ピン碍子（茶）", "1", "25OW通りバインド", "2", "58OW通りバインド", "2", "", "", "低圧直線カバー(大）", "4", "低圧直線カバー(小）", "4", "S58", "4", "S25", "4", "", "", "5T24", "2", "4T24", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11 建替", "120 58SQ 3L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アーームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "低圧ピン碍子（青）", "1", "低圧ピン碍子（白）", "2", "", "", "", "", "58OW通りバインド", "1", "120OW通りバインド", "2", "低圧直線カバー(大）", "6", "", "", "S58", "2", "S120", "4", "", "", "6T24", "2", "5T24", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11 建替", "120 58SQ 4L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アーームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "低圧ピン碍子（青）", "1", "低圧ピン碍子（白）", "2", "低圧ピン碍子（茶）", "1", "", "", "58OW通りバインド", "2", "120OW通りバインド", "2", "低圧直線カバー(大）", "8", "", "", "S58", "4", "S120", "4", "", "", "6T24", "2", "5T24", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン11 建替", "120 58 25SQ 4L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アーームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "低圧ピン碍子（青）", "1", "低圧ピン碍子（白）", "2", "低圧ピン碍子（茶）", "1", "25OW通りバインド", "1", "58OW通りバインド", "1", "120OW通りバインド", "2", "低圧直線カバー(大）", "6", "低圧直線カバー(小）", "2", "S58", "2", "S120", "4", "S25", "2", "6T24", "2", "5T24", "1", "4T24", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン12 建替", "25SQ  3L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アーームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１００", "6", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "", "", "SBグリップ　２５", "6", "", "", "", "", "グリップカバー", "6", "６００ストラップ", "4", "小ストラップ", "12", "低圧直線カバー(小）", "6", "", "", "S25", "6", "", "", "", "", "4T24", "6", "", "", "", "", "", "", "", ""], ["パターン12 建替", "25SQ 4L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アーームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１００", "8", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "SBグリップ　２５", "8", "", "", "", "", "グリップカバー", "8", "", "", "小ストラップ", "16", "低圧直線カバー(小）", "8", "", "", "S25", "8", "", "", "", "", "4T24", "8", "", "", "", "", "", "", "", ""], ["パターン12 建替", "58SQ 3L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アーームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１００", "6", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "", "", "", "", "SBグリップ５８", "6", "", "", "グリップカバー", "6", "６００ストラップ", "4", "小ストラップ", "12", "低圧直線カバー(大）", "6", "", "", "S58", "6", "", "", "", "", "5T24", "3", "", "", "", "", "5T5", "3", "", ""], ["パターン12 建替", "58SQ 4L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アーームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１００", "8", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "", "", "SBグリップ５８", "8", "", "", "グリップカバー", "8", "", "", "小ストラップ", "16", "低圧直線カバー(大）", "8", "", "", "S58", "8", "", "", "", "", "5T24", "4", "", "", "", "", "5T5", "3", "", ""], ["パターン12 建替", "58 25SQ 3L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アーームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１００", "6", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "", "", "SBグリップ　２５", "2", "SBグリップ５８", "4", "", "", "グリップカバー", "6", "６００ストラップ", "4", "小ストラップ", "12", "低圧直線カバー(大）", "4", "低圧直線カバー(小）", "2", "S58", "4", "S25", "2", "", "", "5T24", "2", "4T24", "2", "", "", "5T5", "2", "", ""], ["パターン12 建替", "58 25SQ 4L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アーームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１００", "8", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "SBグリップ　２５", "4", "SBグリップ５８", "4", "", "", "グリップカバー", "8", "", "", "小ストラップ", "16", "低圧直線カバー(大）", "4", "低圧直線カバー(小）", "4", "S58", "4", "S25", "4", "", "", "5T24", "2", "4T24", "4", "", "", "5T5", "2", "", ""], ["パターン12 建替", "120 58SQ 3L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アーームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１００", "6", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "", "", "", "", "SBグリップ５８", "2", "SBグリップ １２０", "4", "グリップカバー", "6", "６００ストラップ", "4", "小ストラップ", "12", "低圧直線カバー(大）", "6", "", "", "S58", "2", "S120", "4", "", "", "6T24", "2", "5T24", "2", "", "", "5T5", "1", "6T6", "2"], ["パターン12 建替", "120 58SQ 4L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アーームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１００", "8", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "", "", "SBグリップ５８", "4", "SBグリップ １２０", "4", "グリップカバー", "8", "", "", "小ストラップ", "16", "低圧直線カバー(大）", "8", "", "", "S58", "4", "S120", "4", "", "", "6T24", "2", "5T24", "2", "", "", "5T5", "2", "6T6", "2"], ["パターン12 建替", "120 58 25SQ 4L", "低圧", "１６x１００", "1", "１６x２４０", "1", "１６x２７０", "1", "アーームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１００", "8", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "SBグリップ　２５", "2", "SBグリップ５８", "2", "SBグリップ １２０", "4", "グリップカバー", "8", "", "", "", "16", "低圧直線カバー(大）", "6", "低圧直線カバー(小）", "2", "S58", "2", "S120", "4", "S25", "2", "6T24", "2", "5T24", "1", "4T24", "2", "5T5", "1", "6T6", "2"], ["パターン13 建替", "25SQ  3L", "低圧", "１６x１２０", "1", "１６x２４０", "1", "１６x３００", "1", "アーームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１２０", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "SBグリップ　２５", "3", "", "", "", "", "グリップカバー", "3", "６００ストラップ", "2", "小ストラップ", "6", "低圧直線カバー(小）", "3", "", "", "S25", "3", "", "", "", "", "4T24", "3", "", "", "", "", "", "", "", ""], ["パターン13 建替", "25SQ 4L", "低圧", "１６x１２０", "1", "１６x２４０", "1", "１６x３００", "1", "アーームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１２０", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "SBグリップ　２５", "4", "", "", "", "", "グリップカバー", "4", "", "", "小ストラップ", "8", "低圧直線カバー(小）", "4", "", "", "S25", "4", "", "", "", "", "4T24", "4", "", "", "", "", "", "", "", ""], ["パターン13 建替", "58SQ 3L", "低圧", "１６x１２０", "1", "１６x２４０", "1", "１６x３００", "1", "アーームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１２０", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "", "", "SBグリップ５８", "3", "", "", "グリップカバー", "3", "６００ストラップ", "2", "小ストラップ", "6", "低圧直線カバー(大）", "3", "", "", "S58", "3", "", "", "", "", "5T24", "3", "", "", "", "", "", "", "", ""], ["パターン13 建替", "58SQ 4L", "低圧", "１６x１２０", "1", "１６x２４０", "1", "１６x３００", "1", "アーームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１２０", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "", "", "SBグリップ５８", "4", "", "", "グリップカバー", "4", "", "", "小ストラップ", "8", "低圧直線カバー(大）", "4", "", "", "S58", "4", "", "", "", "", "5T24", "4", "", "", "", "", "", "", "", ""], ["パターン13 建替", "58 25SQ 3L", "低圧", "１６x１２０", "1", "１６x２４０", "1", "１６x３００", "1", "アーームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１２０", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "SBグリップ　２５", "1", "SBグリップ５８", "2", "", "", "グリップカバー", "3", "６００ストラップ", "2", "小ストラップ", "6", "低圧直線カバー(大）", "2", "低圧直線カバー(小）", "1", "S58", "2", "S25", "1", "", "", "5T24", "2", "4T24", "1", "", "", "", "", "", ""], ["パターン13 建替", "58 25SQ 4L", "低圧", "１６x１２０", "1", "１６x２４０", "1", "１６x３００", "1", "アーームタイ１０００", "1", "アームタイ８００", "1", "単バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１２０", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "SBグリップ　２５", "2", "SBグリップ５８", "2", "", "", "グリップカバー", "4", "", "", "小ストラップ", "8", "低圧直線カバー(大）", "2", "低圧直線カバー(小）", "2", "S58", "2", "S25", "2", "", "", "5T24", "2", "4T24", "2", "", "", "", "", "", ""], ["パターン13 建替", "120 58SQ 3L", "低圧", "", "", "１６x２４０", "1", "１６x４００", "3", "アーームタイ１０００", "1", "アームタイ８００", "1", "抱バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１２０", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "", "", "SBグリップ５８", "1", "SBグリップ １２０", "2", "グリップカバー", "3", "６００ストラップ", "2", "小ストラップ", "6", "低圧直線カバー(大）", "3", "", "", "S58", "1", "S120", "2", "", "", "6T24", "2", "5T24", "2", "", "", "", "", "", ""], ["パターン13 建替", "120 58SQ 4L", "低圧", "", "", "１６x２４０", "1", "１６x４００", "3", "アーームタイ１０００", "1", "アームタイ８００", "1", "抱バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１２０", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "", "", "SBグリップ５８", "2", "SBグリップ １２０", "2", "グリップカバー", "4", "", "", "小ストラップ", "8", "低圧直線カバー(大）", "4", "", "", "S58", "2", "S120", "2", "", "", "6T24", "2", "5T24", "2", "", "", "", "", "", ""], ["パターン13 建替", "120 58 25SQ 4L", "低圧", "", "", "１６x２４０", "1", "１６x４００", "3", "アーームタイ１０００", "1", "アームタイ８００", "1", "抱バンド１７５", "1", "アームタイバンド２２０", "1", "１２x１２０", "4", "１２x１２０", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "SBグリップ　２５", "1", "SBグリップ５８", "1", "SBグリップ １２０", "2", "グリップカバー", "4", "", "", "", "8", "低圧直線カバー(大）", "3", "低圧直線カバー(小）", "1", "S58", "1", "S120", "2", "S25", "1", "6T24", "2", "5T24", "1", "4T24", "1", "", "", "", ""], ["パターン41 建替", "25SQ  3L", "低圧", "自在バンド", "2", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "25OW通りバインド", "3", "", "", "", "", "低圧直線カバー(小）", "6", "", "", "S25", "6", "", "", "", "", "4T24", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41 建替", "25SQ 4L", "低圧", "自在バンド", "2", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "25OW通りバインド", "4", "", "", "", "", "低圧直線カバー(小）", "8", "", "", "S25", "8", "", "", "", "", "4T24", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41 建替", "58SQ 3L", "低圧", "自在バンド", "2", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "", "", "58OW通りバインド", "3", "", "", "低圧直線カバー(大）", "6", "", "", "S58", "6", "", "", "", "", "5T24", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41 建替", "58SQ 4L", "低圧", "自在バンド", "2", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "", "", "58OW通りバインド", "4", "", "", "低圧直線カバー(大）", "8", "", "", "S58", "8", "", "", "", "", "5T24", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41 建替", "58 25SQ 3L", "低圧", "自在バンド", "2", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "25OW通りバインド", "1", "58OW通りバインド", "2", "", "", "低圧直線カバー(大）", "4", "低圧直線カバー(小）", "2", "S58", "4", "S25", "2", "", "", "5T24", "2", "4T24", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41 建替", "58 25SQ 4L", "低圧", "自在バンド", "2", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "25OW通りバインド", "2", "58OW通りバインド", "2", "", "", "低圧直線カバー(大）", "4", "低圧直線カバー(小）", "4", "S58", "4", "S25", "4", "", "", "5T24", "2", "4T24", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41 建替", "120 58SQ 3L", "低圧", "自在バンド", "2", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "", "", "58OW通りバインド", "1", "120OW通りバインド", "2", "低圧直線カバー(大）", "6", "", "", "S58", "2", "S120", "4", "", "", "6T24", "2", "5T24", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41 建替", "120 58SQ 4L", "低圧", "自在バンド", "2", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "", "", "58OW通りバインド", "2", "120OW通りバインド", "2", "低圧直線カバー(大）", "8", "", "", "S58", "4", "S120", "4", "", "", "6T24", "2", "5T24", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン41 建替", "120 58 25SQ 4L", "低圧", "自在バンド", "2", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "25OW通りバインド", "1", "58OW通りバインド", "1", "120OW通りバインド", "2", "低圧直線カバー(大）", "6", "低圧直線カバー(小）", "2", "S58", "2", "S120", "4", "S25", "2", "6T24", "2", "5T24", "1", "4T24", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42 建替", "25SQ  3L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "", "", "SBグリップ　２５", "6", "", "", "", "", "グリップカバー", "6", "低圧直線カバー(小）", "6", "", "", "S25", "6", "", "", "", "", "4T24", "6", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42 建替", "25SQ 4L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "SBグリップ　２５", "8", "", "", "", "", "グリップカバー", "8", "低圧直線カバー(小）", "8", "", "", "S25", "8", "", "", "", "", "4T24", "8", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42 建替", "58SQ 3L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "", "", "", "", "SBグリップ５８", "6", "", "", "グリップカバー", "6", "低圧直線カバー(大）", "6", "", "", "S58", "6", "", "", "", "", "5T24", "3", "", "", "", "", "5T5", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42 建替", "58SQ 4L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "", "", "SBグリップ５８", "8", "", "", "グリップカバー", "8", "低圧直線カバー(大）", "8", "", "", "S58", "8", "", "", "", "", "5T24", "4", "", "", "", "", "5T5", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42 建替", "58 25SQ 3L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "", "", "SBグリップ　２５", "2", "SBグリップ５８", "4", "", "", "グリップカバー", "6", "低圧直線カバー(大）", "4", "低圧直線カバー(小）", "2", "S58", "4", "S25", "2", "", "", "5T24", "2", "4T24", "2", "", "", "5T5", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42 建替", "58 25SQ 4L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "SBグリップ　２５", "4", "SBグリップ５８", "4", "", "", "グリップカバー", "8", "低圧直線カバー(大）", "4", "低圧直線カバー(小）", "4", "S58", "4", "S25", "4", "", "", "5T24", "2", "4T24", "4", "", "", "5T5", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42 建替", "120 58SQ 3L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "", "", "", "", "SBグリップ５８", "2", "SBグリップ １２０", "4", "グリップカバー", "6", "低圧直線カバー(大）", "6", "", "", "S58", "2", "S120", "4", "", "", "6T24", "2", "5T24", "2", "", "", "5T5", "1", "6T6", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42 建替", "120 58SQ 4L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "", "", "SBグリップ５８", "4", "SBグリップ １２０", "4", "グリップカバー", "8", "低圧直線カバー(大）", "8", "", "", "S58", "4", "S120", "4", "", "", "6T24", "2", "5T24", "2", "", "", "5T5", "2", "6T6", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン42 建替", "120 58 25SQ 4L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "SBグリップ　２５", "2", "SBグリップ５８", "2", "SBグリップ １２０", "4", "グリップカバー", "8", "低圧直線カバー(大）", "6", "低圧直線カバー(小）", "2", "S58", "2", "S120", "4", "S25", "2", "6T24", "2", "5T24", "1", "4T24", "2", "5T5", "1", "6T6", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43 建替", "25SQ  3L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "SBグリップ　２５", "3", "", "", "", "", "グリップカバー", "3", "低圧直線カバー(小）", "3", "", "", "S25", "3", "", "", "", "", "4T24", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43 建替", "25SQ 4L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "SBグリップ　２５", "4", "", "", "", "", "グリップカバー", "4", "低圧直線カバー(小）", "4", "", "", "S25", "4", "", "", "", "", "4T24", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43 建替", "58SQ 3L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "", "", "SBグリップ５８", "3", "", "", "グリップカバー", "3", "低圧直線カバー(大）", "3", "", "", "S58", "3", "", "", "", "", "5T24", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43 建替", "58SQ 4L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "", "", "SBグリップ５８", "4", "", "", "グリップカバー", "4", "低圧直線カバー(大）", "4", "", "", "S58", "4", "", "", "", "", "5T24", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43 建替", "58 25SQ 3L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "SBグリップ　２５", "1", "SBグリップ５８", "2", "", "", "グリップカバー", "3", "低圧直線カバー(大）", "2", "低圧直線カバー(小）", "1", "S58", "2", "S25", "1", "", "", "5T24", "2", "4T24", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43 建替", "58 25SQ 4L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "SBグリップ　２５", "2", "SBグリップ５８", "2", "", "", "グリップカバー", "4", "低圧直線カバー(大）", "2", "低圧直線カバー(小）", "2", "S58", "2", "S25", "2", "", "", "5T24", "2", "4T24", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43 建替", "120 58SQ 3L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "", "", "SBグリップ５８", "1", "SBグリップ １２０", "2", "グリップカバー", "3", "低圧直線カバー(大）", "3", "", "", "S58", "1", "S120", "2", "", "", "6T24", "2", "5T24", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43 建替", "120 58SQ 4L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "", "", "SBグリップ５８", "2", "SBグリップ １２０", "2", "グリップカバー", "4", "低圧直線カバー(大）", "4", "", "", "S58", "2", "S120", "2", "", "", "6T24", "2", "5T24", "2", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン43 建替", "120 58 25SQ 4L", "低圧", "自在バンド", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "SBグリップ　２５", "1", "SBグリップ５８", "1", "SBグリップ １２０", "2", "グリップカバー", "4", "低圧直線カバー(大）", "3", "低圧直線カバー(小）", "1", "S58", "1", "S120", "2", "S25", "1", "6T24", "2", "5T24", "1", "4T24", "1", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン51 建替", "25SQ  3L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "中線引留金物", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "25OW通りバインド", "3", "", "", "", "", "１２x１２０", "3", "１２x１００", "3", "単バンド１７５", "1", "単バンド２２６", "1", "Bリング", "4", "低圧直線カバー(小）", "6", "", "", "S25", "6", "", "", "", "", "4T24", "3", "", "", "", "", "", "", "", "", "", ""], ["パターン51 建替", "25SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "中線引留金物", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "25OW通りバインド", "4", "", "", "", "", "１２x１２０", "4", "１２x１００", "4", "単バンド１７５", "1", "単バンド２２６", "1", "Bリング", "4", "低圧直線カバー(小）", "8", "", "", "S25", "8", "", "", "", "", "4T24", "4", "", "", "", "", "", "", "", "", "", ""], ["パターン51 建替", "58SQ 3L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "中線引留金物", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "", "", "58OW通りバインド", "3", "", "", "１２x１２０", "3", "１２x１００", "3", "単バンド１７５", "1", "単バンド２２６", "1", "Bリング", "4", "低圧直線カバー(大）", "6", "", "", "S58", "6", "", "", "", "", "5T24", "3", "", "", "", "", "", "", "", "", "", ""], ["パターン51 建替", "58SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "中線引留金物", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "", "", "58OW通りバインド", "4", "", "", "１２x１２０", "4", "１２x１００", "4", "単バンド１７５", "1", "単バンド２２６", "1", "Bリング", "4", "低圧直線カバー(大）", "8", "", "", "S58", "8", "", "", "", "", "5T24", "4", "", "", "", "", "", "", "", "", "", ""], ["パターン51 建替", "58 25SQ 3L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "中線引留金物", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "25OW通りバインド", "1", "58OW通りバインド", "2", "", "", "１２x１２０", "3", "１２x１００", "3", "単バンド１７５", "1", "単バンド２２６", "1", "Bリング", "4", "低圧直線カバー(大）", "4", "低圧直線カバー(小）", "2", "S58", "4", "S25", "2", "", "", "5T24", "2", "4T24", "1", "", "", "", "", "", "", "", ""], ["パターン51 建替", "58 25SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "中線引留金物", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "25OW通りバインド", "2", "58OW通りバインド", "2", "", "", "１２x１２０", "4", "１２x１００", "4", "単バンド１７５", "1", "単バンド２２６", "1", "Bリング", "4", "低圧直線カバー(大）", "4", "低圧直線カバー(小）", "4", "S58", "4", "S25", "4", "", "", "5T24", "2", "4T24", "2", "", "", "", "", "", "", "", ""], ["パターン51 建替", "120 58SQ 3L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "", "", "中線引留金物", "3", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "", "", "58OW通りバインド", "1", "120OW通りバインド", "2", "１２x１２０", "3", "１２x１００", "3", "単バンド１７５", "1", "単バンド２２６", "1", "Bリング", "4", "低圧直線カバー(大）", "6", "", "", "S58", "2", "S120", "4", "", "", "6T24", "2", "5T24", "2", "", "", "", "", "", "", "", ""], ["パターン51 建替", "120 58SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "", "", "中線引留金物", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "", "", "58OW通りバインド", "2", "120OW通りバインド", "2", "１２x１２０", "4", "１２x１００", "4", "単バンド１７５", "1", "単バンド２２６", "1", "Bリング", "4", "低圧直線カバー(大）", "8", "", "", "S58", "4", "S120", "4", "", "", "6T24", "2", "5T24", "2", "", "", "", "", "", "", "", ""], ["パターン51 建替", "120 58 25SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "", "", "中線引留金物", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "25OW通りバインド", "1", "58OW通りバインド", "1", "120OW通りバインド", "2", "１２x１２０", "4", "１２x１００", "4", "単バンド１７５", "1", "単バンド２２６", "1", "Bリング", "4", "低圧直線カバー(大）", "6", "低圧直線カバー(小）", "2", "S58", "2", "S120", "4", "S25", "2", "6T24", "2", "5T24", "1", "4T24", "1", "", "", "", "", "", ""], ["パターン52 建替", "25SQ  3L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "１２x１２０", "3", "１２x１００", "6", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "", "", "SBグリップ　２５", "6", "", "", "", "", "グリップカバー", "6", "小ストラップ", "12", "Bリング", "4", "低圧直線カバー(小）", "6", "", "", "S25", "6", "", "", "", "", "4T24", "6", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン52 建替", "25SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "１２x１２０", "4", "１２x１００", "8", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "SBグリップ　２５", "8", "", "", "", "", "グリップカバー", "8", "小ストラップ", "16", "Bリング", "4", "低圧直線カバー(小）", "8", "", "", "S25", "8", "", "", "", "", "4T24", "8", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン52 建替", "58SQ 3L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "１２x１２０", "3", "１２x１００", "6", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "", "", "", "", "SBグリップ５８", "6", "", "", "グリップカバー", "6", "小ストラップ", "12", "Bリング", "4", "低圧直線カバー(大）", "6", "", "", "S58", "6", "", "", "", "", "5T24", "3", "", "", "", "", "5T5", "3", "", "", "", "", "", ""], ["パターン52 建替", "58SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "１２x１２０", "4", "１２x１００", "8", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "", "", "SBグリップ５８", "8", "", "", "グリップカバー", "8", "小ストラップ", "16", "Bリング", "4", "低圧直線カバー(大）", "8", "", "", "S58", "8", "", "", "", "", "5T24", "4", "", "", "", "", "5T5", "3", "", "", "", "", "", ""], ["パターン52 建替", "58 25SQ 3L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "１２x１２０", "3", "１２x１００", "6", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "", "", "SBグリップ　２５", "2", "SBグリップ５８", "4", "", "", "グリップカバー", "6", "小ストラップ", "12", "Bリング", "4", "低圧直線カバー(大）", "4", "低圧直線カバー(小）", "2", "S58", "4", "S25", "2", "", "", "5T24", "2", "4T24", "2", "", "", "5T5", "2", "", "", "", "", "", ""], ["パターン52 建替", "58 25SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "1", "１２x１２０", "4", "１２x１００", "8", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "SBグリップ　２５", "4", "SBグリップ５８", "4", "", "", "グリップカバー", "8", "小ストラップ", "16", "Bリング", "4", "低圧直線カバー(大）", "4", "低圧直線カバー(小）", "4", "S58", "4", "S25", "4", "", "", "5T24", "2", "4T24", "4", "", "", "5T5", "2", "", "", "", "", "", ""], ["パターン52 建替", "120 58SQ 3L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "", "", "１２x１２０", "3", "１２x１００", "6", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "", "", "", "", "SBグリップ５８", "2", "SBグリップ １２０", "4", "グリップカバー", "6", "小ストラップ", "12", "Bリング", "4", "低圧直線カバー(大）", "6", "", "", "S58", "2", "S120", "4", "", "", "6T24", "2", "5T24", "2", "", "", "5T5", "1", "6T6", "2", "", "", "", ""], ["パターン52 建替", "120 58SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "", "", "１２x１２０", "4", "１２x１００", "8", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "", "", "SBグリップ５８", "4", "SBグリップ １２０", "4", "グリップカバー", "8", "小ストラップ", "16", "Bリング", "4", "低圧直線カバー(大）", "8", "", "", "S58", "4", "S120", "4", "", "", "6T24", "2", "5T24", "2", "", "", "5T5", "2", "6T6", "2", "", "", "", ""], ["パターン52 建替", "120 58 25SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "", "", "１２x１２０", "4", "１２x１００", "8", "低圧引留碍子（青）", "2", "低圧引留碍子(白）", "4", "低圧引留碍子(茶）", "2", "SBグリップ　２５", "2", "SBグリップ５８", "2", "SBグリップ １２０", "4", "グリップカバー", "8", "小ストラップ", "16", "Bリング", "4", "低圧直線カバー(大）", "6", "低圧直線カバー(小）", "2", "S58", "2", "S120", "4", "S25", "2", "6T24", "2", "5T24", "1", "4T24", "2", "5T5", "1", "6T6", "2", "", "", "", ""], ["パターン53 建替", "25SQ  3L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "2", "１２x１２０", "3", "１２x１００", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "SBグリップ　２５", "3", "", "", "", "", "グリップカバー", "3", "小ストラップ", "6", "ねじりストラップ", "2", "Bリング", "4", "低圧直線カバー(小）", "3", "", "", "S25", "3", "", "", "", "", "丸シンブル", "1", "4T24", "3", "", "", "", "", "", "", "", ""], ["パターン53 建替", "25SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "2", "１２x１２０", "4", "１２x１００", "5", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "SBグリップ　２５", "4", "", "", "", "", "グリップカバー", "4", "小ストラップ", "8", "ねじりストラップ", "2", "Bリング", "4", "低圧直線カバー(小）", "4", "", "", "S25", "4", "", "", "", "", "丸シンブル", "1", "4T24", "4", "", "", "", "", "", "", "", ""], ["パターン53 建替", "58SQ 3L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "2", "１２x１２０", "3", "１２x１００", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "", "", "SBグリップ５８", "3", "", "", "グリップカバー", "3", "小ストラップ", "6", "ねじりストラップ", "2", "Bリング", "4", "低圧直線カバー(大）", "3", "", "", "S58", "3", "", "", "", "", "丸シンブル", "1", "5T24", "3", "", "", "", "", "", "", "", ""], ["パターン53 建替", "58SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "2", "１２x１２０", "4", "１２x１００", "5", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "", "", "SBグリップ５８", "4", "", "", "グリップカバー", "4", "小ストラップ", "8", "ねじりストラップ", "2", "Bリング", "4", "低圧直線カバー(大）", "4", "", "", "S58", "4", "", "", "", "", "丸シンブル", "1", "5T24", "4", "", "", "", "", "", "", "", ""], ["パターン53 建替", "58 25SQ 3L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "2", "１２x１２０", "3", "１２x１００", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "SBグリップ　２５", "1", "SBグリップ５８", "2", "", "", "グリップカバー", "3", "小ストラップ", "6", "ねじりストラップ", "2", "Bリング", "4", "低圧直線カバー(大）", "2", "低圧直線カバー(小）", "1", "S58", "2", "S25", "1", "", "", "丸シンブル", "1", "5T24", "2", "4T24", "1", "", "", "", "", "", ""], ["パターン53 建替", "58 25SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "電話バンド", "1", "１６x１５０", "2", "１２x１２０", "4", "１２x１００", "5", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "SBグリップ　２５", "2", "SBグリップ５８", "2", "", "", "グリップカバー", "4", "小ストラップ", "8", "ねじりストラップ", "2", "Bリング", "4", "低圧直線カバー(大）", "2", "低圧直線カバー(小）", "2", "S58", "2", "S25", "2", "", "", "丸シンブル", "1", "5T24", "2", "4T24", "2", "", "", "", "", "", ""], ["パターン53 建替", "120 58SQ 3L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "１６x１５０", "1", "１２x１２０", "3", "１２x１００", "4", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "", "", "", "", "SBグリップ５８", "1", "SBグリップ １２０", "2", "グリップカバー", "3", "小ストラップ", "6", "ねじりストラップ", "2", "Bリング", "4", "低圧直線カバー(大）", "3", "", "", "S58", "1", "S120", "2", "", "", "丸シンブル", "1", "6T24", "2", "5T24", "2", "", "", "", "", "", ""], ["パターン53 建替", "120 58SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "１６x１５０", "1", "１２x１２０", "4", "１２x１００", "5", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "", "", "SBグリップ５８", "2", "SBグリップ １２０", "2", "グリップカバー", "4", "小ストラップ", "8", "ねじりストラップ", "2", "Bリング", "4", "低圧直線カバー(大）", "4", "", "", "S58", "2", "S120", "2", "", "", "丸シンブル", "1", "6T24", "2", "5T24", "2", "", "", "", "", "", ""], ["パターン53 建替", "120 58 25SQ 4L", "低圧", "１６x３００", "1", "１６x１８０", "1", "１６x１２０", "2", "TRアームタイバンド", "1", "１６x１５０", "1", "１２x１２０", "4", "１２x１００", "5", "低圧引留碍子（青）", "1", "低圧引留碍子(白）", "2", "低圧引留碍子(茶）", "1", "SBグリップ　２５", "1", "SBグリップ５８", "1", "SBグリップ １２０", "2", "グリップカバー", "4", "小ストラップ", "8", "ねじりストラップ", "2", "Bリング", "4", "低圧直線カバー(大）", "3", "低圧直線カバー(小）", "1", "S58", "1", "S120", "2", "S25", "1", "丸シンブル", "1", "6T24", "2", "5T24", "1", "4T24", "1", "", "", "", ""], ["パターン38", "10＋20", "一体型変圧器", "トランスバンド", "1", "足場金具", "2", "ノーアムタイバンド", "1", "機器取付金物", "3", "補助金物", "2", "◯T1", "3", "引下線カバー", "3", "16x120", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン38", "20＋30", "一体型変圧器", "トランスバンド", "1", "足場金具", "2", "ノーアムタイバンド", "1", "機器取付金物", "3", "補助金物", "2", "◯T1", "3", "引下線カバー", "3", "16x120", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン38", "30＋50", "一体型変圧器", "トランスバンド", "1", "足場金具", "2", "ノーアムタイバンド", "1", "機器取付金物", "3", "補助金物", "2", "◯T1", "3", "引下線カバー", "3", "16x120", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["パターン38", "50＋100", "一体型変圧器", "トランスバンド", "1", "足場金具", "2", "ノーアムタイバンド", "1", "機器取付金物", "3", "補助金物", "2", "◯T1", "3", "引下線カバー", "3", "16x120", "4", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]]};
+
+  const CAT_ICONS = {
+      '高圧':        { icon: 'bolt',                      bg: '#f59e0b' },
+      '低圧':        { icon: 'electrical_services',        bg: '#3b82f6' },
+      '灯動変台':    { icon: 'lightbulb',                  bg: '#10b981' },
+      '単相変台':    { icon: 'power',                      bg: '#8b5cf6' },
+      '一体型変圧器':{ icon: 'settings_input_component',   bg: '#ec4899' },
+      '支線':        { icon: 'anchor',                     bg: '#06b6d4' },
+      '架空地線':    { icon: 'power_input',                bg: '#64748b' },
+      '引込み':      { icon: 'home',                       bg: '#14b8a6' },
+      '弱電':        { icon: 'cell_tower',                 bg: '#7c3aed' }
+    };
+
+  // ── アプリ状態 ──
+  let appData   = {};
+  let parsedCache = null;  // getParsedRows のキャッシュ
+  let selCat    = null;
+  let selPat    = null;
+  let selSize   = null;
+  let cart      = [];
+  let currentTab = 'search';
+
+  // ── 初期化 ──
+  window.addEventListener('DOMContentLoaded', () => {
+    const isGas = (typeof google !== 'undefined' && google.script && google.script.run);
+    document.getElementById('statusDot').classList.toggle('offline', !isGas);
+    if (!isGas) document.getElementById('syncBtn').style.display = 'none';
+
+    const cached = localStorage.getItem('mat_cache');
+    if (cached) {
+      try { appData = JSON.parse(cached); } catch(e) { appData = INITIAL_EMBEDDED_DATA; }
+    } else {
+      appData = INITIAL_EMBEDDED_DATA;
+    }
+
+    const cachedCart = localStorage.getItem('mat_cart');
+    if (cachedCart) {
+      try { cart = JSON.parse(cachedCart); updateCartBadge(); } catch(e) {}
+    }
+
+    renderCategories();
+  });
+
+  // ── getParsedRows（キャッシュ付き）──
+  function getParsedRows() {
+    if (parsedCache) return parsedCache;
+    const headers = appData.headers || [];
+    const rows = appData.rows || [];
+
+    // 材料列を動的に検出（偶数インデックス3以降で空でない = 材料名, 次が数量）
+    const matColIndices = [];
+    for (let i = 3; i < headers.length - 1; i += 2) {
+      matColIndices.push(i);
+    }
+
+    parsedCache = rows.map(r => {
+      const pat  = (r[0] || '').trim();
+      const size = (r[1] || '').trim();
+      const cat  = (r[2] || '').trim();
+      const materials = [];
+      for (const idx of matColIndices) {
+        if (idx < r.length) {
+          const name = (r[idx] || '').trim();
+          const qty  = parseFloat((r[idx+1] || '0').trim()) || 0;
+          if (name) materials.push({ name, qty });
+        }
+      }
+      return { pat, size, cat, materials };
+    }).filter(it => it.pat || it.size || it.cat);
+
+    return parsedCache;
+  }
+
+  // ── 画面切り替え ──
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  function goBack(screenId) {
+    showScreen(screenId);
+  }
+
+  function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    if (tab === 'search') {
+      document.getElementById('navSearch').classList.add('active');
+      showScreen('screenCat');
+      selCat = null; selPat = null; selSize = null;
+      renderCategories();
+    } else if (tab === 'cart') {
+      document.getElementById('navCart').classList.add('active');
+      showScreen('screenCart');
+      renderCart();
+    } else if (tab === 'reverse') {
+      document.getElementById('navReverse').classList.add('active');
+      showScreen('screenReverse');
+      document.getElementById('reverseInput').focus();
+    }
+  }
+
+  // ── ステップバー描画 ──
+  function renderStepBar(containerId, activeStep) {
+    const steps = [
+      { n:'1', label:'カテゴリ' },
+      { n:'2', label:'パターン' },
+      { n:'3', label:'サイズ' },
+      { n:'4', label:'材料確認' }
+    ];
+    const html = steps.map((s, i) => {
+      const step = i + 1;
+      let cls = step < activeStep ? 'done' : step === activeStep ? 'active' : '';
+      const numContent = step < activeStep
+        ? '<span class="material-symbols-outlined" style="font-size:14px">check</span>'
+        : s.n;
+      return (i > 0 ? '<span class="step-arrow">›</span>' : '') +
+        `<div class="step-item ${cls}"><div class="step-num">${numContent}</div>${s.label}</div>`;
+    }).join('');
+    document.getElementById(containerId).innerHTML = html;
+  }
+
+  // ── STEP1: カテゴリ ──
+  function renderCategories() {
+    const items = getParsedRows();
+    const counts = {};
+    items.forEach(it => { if (it.cat) counts[it.cat] = (counts[it.cat] || 0) + 1; });
+
+    const grid = document.getElementById('categoryGrid');
+    grid.innerHTML = '';
+
+    Object.keys(counts).sort().forEach(cat => {
+      const cfg = CAT_ICONS[cat] || { icon: 'grid_view', bg: '#90a4ae' };
+      const card = document.createElement('div');
+      card.className = 'cat-card';
+      card.innerHTML = `
+        <div class="cat-icon-wrap" style="background:${cfg.bg}">
+          <span class="material-symbols-outlined">${cfg.icon}</span>
+        </div>
+        <div class="cat-name">${escHtml(cat)}</div>
+        <div class="cat-count">${counts[cat]} パターン</div>
+      `;
+      card.addEventListener('click', () => selectCategory(cat));
+      grid.appendChild(card);
+    });
+  }
+
+  function selectCategory(cat) {
+    selCat = cat; selPat = null; selSize = null;
+    renderStepBar('stepBar2', 2);
+    renderPatterns();
+    showScreen('screenPat');
+  }
+
+  // ── STEP2: パターン ──
+  function renderPatterns() {
+    const items = getParsedRows();
+    const patSet = new Set();
+    items.filter(it => it.cat === selCat).forEach(it => { if (it.pat) patSet.add(it.pat); });
+    const pats = Array.from(patSet).sort();
+
+    const list = document.getElementById('patternList');
+    list.innerHTML = '';
+    pats.forEach(pat => {
+      const btn = document.createElement('button');
+      btn.className = 'pattern-btn';
+      btn.innerHTML = `<span>${escHtml(pat)}</span><span class="material-symbols-outlined">chevron_right</span>`;
+      btn.addEventListener('click', () => selectPattern(pat));
+      list.appendChild(btn);
+    });
+  }
+
+  function selectPattern(pat) {
+    selPat = pat; selSize = null;
+    renderStepBar('stepBar3', 3);
+    renderSizes();
+    showScreen('screenSize');
+  }
+
+  // ── STEP3: サイズ ──
+  function renderSizes() {
+    const items = getParsedRows();
+    const sizes = items
+      .filter(it => it.cat === selCat && it.pat === selPat && it.size)
+      .map(it => it.size);
+
+    const grid = document.getElementById('sizeGrid');
+    grid.innerHTML = '';
+    sizes.forEach(size => {
+      const btn = document.createElement('button');
+      btn.className = 'size-btn';
+      btn.textContent = size;
+      btn.addEventListener('click', () => selectSize(size));
+      grid.appendChild(btn);
+    });
+  }
+
+  function selectSize(size) {
+    selSize = size;
+    renderStepBar('stepBar4', 4);
+    renderResult();
+    showScreen('screenResult');
+  }
+
+  // ── STEP4: 結果 ──
+  function renderResult() {
+    const items = getParsedRows();
+    const match = items.find(it => it.cat === selCat && it.pat === selPat && it.size === selSize);
+
+    document.getElementById('resultSummary').innerHTML =
+      `カテゴリ: <strong>${escHtml(selCat)}</strong>　パターン: <strong>${escHtml(selPat)}</strong>　サイズ: <strong>${escHtml(selSize)}</strong>`;
+
+    const list = document.getElementById('materialList');
+    list.innerHTML = '';
+
+    if (!match || match.materials.length === 0) {
+      list.innerHTML = '<div class="empty-state"><span class="material-symbols-outlined">inventory_2</span>材料データがありません</div>';
+      return;
+    }
+
+    match.materials.forEach(mat => {
+      const row = document.createElement('div');
+      row.className = 'material-row';
+      row.innerHTML = `<span class="mat-name">${escHtml(mat.name)}</span><span class="mat-qty">${mat.qty % 1 === 0 ? mat.qty : mat.qty.toFixed(2)}</span>`;
+      list.appendChild(row);
+    });
+
+    // ログ
+    if (typeof google !== 'undefined' && google.script && google.script.run && match) {
+      google.script.run.logSearch(match.materials.length, '');
+    }
+  }
+
+  // ── クリップボードコピー ──
+  function copyResult() {
+    const items = getParsedRows();
+    const match = items.find(it => it.cat === selCat && it.pat === selPat && it.size === selSize);
+    if (!match) return;
+
+    let text = `【材料明細】\nカテゴリ: ${selCat}\nパターン: ${selPat}\nサイズ: ${selSize}\n${'-'.repeat(30)}\n材料名\t数量\n`;
+    match.materials.forEach(m => { text += `${m.name}\t${m.qty.toFixed(2)}\n`; });
+
+    navigator.clipboard.writeText(text)
+      .then(() => showToast('クリップボードにコピーしました'))
+      .catch(() => showToast('コピーに失敗しました'));
+  }
+
+  // ── 印刷 ──
+  function printResult() {
+    document.getElementById('printHeader').innerHTML =
+      `<h2 style="font-size:1.1rem;font-weight:700;margin-bottom:4px">材料明細</h2>
+       <p style="font-size:0.85rem;color:#555">カテゴリ: ${escHtml(selCat)} ／ パターン: ${escHtml(selPat)} ／ サイズ: ${escHtml(selSize)}</p>
+       <p style="font-size:0.75rem;color:#888;margin-top:2px">${new Date().toLocaleString('ja-JP')}</p>
+       <hr style="margin:8px 0">`;
+    window.print();
+    document.getElementById('printHeader').innerHTML = '';
+  }
+
+  // ── カートに追加 ──
+  function addToCart() {
+    const items = getParsedRows();
+    const match = items.find(it => it.cat === selCat && it.pat === selPat && it.size === selSize);
+    if (!match) return;
+
+    const existing = cart.find(c => c.cat === selCat && c.pat === selPat && c.size === selSize);
+    if (existing) {
+      existing.qty += 1;
+    } else {
+      cart.push({ cat: selCat, pat: selPat, size: selSize, qty: 1, materials: match.materials });
+    }
+    localStorage.setItem('mat_cart', JSON.stringify(cart));
+    updateCartBadge();
+    showToast(`${selPat}（${selSize}）を集計リストに追加しました`);
+  }
+
+  function updateCartBadge() {
+    const total = cart.reduce((s, c) => s + c.qty, 0);
+    const badge = document.getElementById('cartBadge');
+    badge.textContent = total;
+    badge.style.display = total > 0 ? 'flex' : 'none';
+  }
+
+  // ── カート描画 ──
+  function renderCart() {
+    const cartList = document.getElementById('cartList');
+    const totalWrap = document.getElementById('totalWrap');
+    const totalBody = document.getElementById('totalBody');
+    cartList.innerHTML = '';
+    totalBody.innerHTML = '';
+
+    if (cart.length === 0) {
+      cartList.innerHTML = '<div class="cart-empty"><span class="material-symbols-outlined">add_shopping_cart</span>集計リストが空です<br><small style="margin-top:6px;display:block">材料検索からパターンを追加してください</small></div>';
+      totalWrap.style.display = 'none';
+      return;
+    }
+
+    cart.forEach((item, idx) => {
+      const card = document.createElement('div');
+      card.className = 'cart-item-card';
+      card.innerHTML = `
+        <div class="cart-item-info">
+          <div class="cart-item-name">${escHtml(item.pat)}</div>
+          <div class="cart-item-meta">${escHtml(item.cat)} ／ ${escHtml(item.size)}</div>
+        </div>
+        <div class="cart-item-controls">
+          <div class="qty-ctrl">
+            <button data-idx="${idx}" data-delta="-1" class="cart-delta">−</button>
+            <div class="qty-val">${item.qty}基</div>
+            <button data-idx="${idx}" data-delta="1" class="cart-delta">＋</button>
+          </div>
+          <button class="del-btn" data-del="${idx}">
+            <span class="material-symbols-outlined">delete</span>
+          </button>
+        </div>
+      `;
+      cartList.appendChild(card);
+    });
+
+    // イベント登録（XSS回避のため data-* 属性 + addEventListener）
+    cartList.querySelectorAll('.cart-delta').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.idx);
+        const delta = parseInt(btn.dataset.delta);
+        adjustCartQty(idx, delta);
+      });
+    });
+    cartList.querySelectorAll('.del-btn').forEach(btn => {
+      btn.addEventListener('click', () => removeFromCart(parseInt(btn.dataset.del)));
+    });
+
+    // 合計
+    const sumMap = {};
+    cart.forEach(item => {
+      item.materials.forEach(mat => {
+        sumMap[mat.name] = (sumMap[mat.name] || 0) + mat.qty * item.qty;
+      });
+    });
+    Object.keys(sumMap).sort().forEach(name => {
+      const qty = sumMap[name];
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${escHtml(name)}</td><td><span class="qty-pill">${qty % 1 === 0 ? qty : qty.toFixed(2)}</span></td>`;
+      totalBody.appendChild(tr);
+    });
+    totalWrap.style.display = 'block';
+  }
+
+  function adjustCartQty(idx, delta) {
+    cart[idx].qty += delta;
+    if (cart[idx].qty <= 0) cart.splice(idx, 1);
+    localStorage.setItem('mat_cart', JSON.stringify(cart));
+    updateCartBadge();
+    renderCart();
+  }
+
+  function removeFromCart(idx) {
+    cart.splice(idx, 1);
+    localStorage.setItem('mat_cart', JSON.stringify(cart));
+    updateCartBadge();
+    renderCart();
+  }
+
+  function clearCart() {
+    if (!confirm('集計リストをすべてクリアしますか？')) return;
+    cart = [];
+    localStorage.removeItem('mat_cart');
+    updateCartBadge();
+    renderCart();
+    showToast('集計リストをクリアしました');
+  }
+
+  function copyCart() {
+    if (cart.length === 0) { showToast('集計リストが空です'); return; }
+    const sumMap = {};
+    cart.forEach(item => {
+      item.materials.forEach(mat => {
+        sumMap[mat.name] = (sumMap[mat.name] || 0) + mat.qty * item.qty;
+      });
+    });
+    let text = '【合計材料集計リスト】\n';
+    text += `対象パターン: ${cart.length}種類\n${'-'.repeat(30)}\n材料名\t合計数量\n`;
+    Object.keys(sumMap).sort().forEach(name => {
+      text += `${name}\t${sumMap[name].toFixed(2)}\n`;
+    });
+    navigator.clipboard.writeText(text)
+      .then(() => showToast('合計リストをコピーしました'))
+      .catch(() => showToast('コピーに失敗しました'));
+  }
+
+  function printCart() {
+    if (cart.length === 0) { showToast('集計リストが空です'); return; }
+    window.print();
+  }
+
+  // ── 逆引き検索 ──
+  function runReverse() {
+    const query = (document.getElementById('reverseInput').value || '').trim().toLowerCase();
+    const resultList = document.getElementById('reverseList');
+
+    if (!query) {
+      resultList.innerHTML = '<div class="empty-state"><span class="material-symbols-outlined">find_in_page</span>材料名のキーワードを入力してください</div>';
+      return;
+    }
+
+    const items = getParsedRows();
+    const matches = [];
+    items.forEach(it => {
+      it.materials.forEach(mat => {
+        if (mat.name.toLowerCase().includes(query)) {
+          matches.push({ cat: it.cat, pat: it.pat, size: it.size, matName: mat.name, qty: mat.qty });
+        }
+      });
+    });
+
+    resultList.innerHTML = '';
+    if (matches.length === 0) {
+      resultList.innerHTML = `<div class="empty-state"><span class="material-symbols-outlined">search_off</span>「${escHtml(query)}」に一致する材料が見つかりません</div>`;
+      return;
+    }
+
+    const display = matches.slice(0, 50);
+    display.forEach(m => {
+      const card = document.createElement('div');
+      card.className = 'rev-card';
+      card.innerHTML = `
+        <div>
+          <div class="rev-mat">${escHtml(m.matName)} <span style="font-size:0.8rem;color:var(--text-sub);font-weight:400">×${m.qty % 1===0 ? m.qty : m.qty.toFixed(2)}</span></div>
+          <div class="rev-meta">${escHtml(m.cat)} ／ ${escHtml(m.pat)} ／ ${escHtml(m.size)}</div>
+        </div>
+        <button class="btn-sm rev-jump">表示</button>
+      `;
+      // XSS回避: data-属性 + addEventListener
+      const jumpBtn = card.querySelector('.rev-jump');
+      jumpBtn.dataset.cat  = m.cat;
+      jumpBtn.dataset.pat  = m.pat;
+      jumpBtn.dataset.size = m.size;
+      jumpBtn.addEventListener('click', () => {
+        selCat  = jumpBtn.dataset.cat;
+        selPat  = jumpBtn.dataset.pat;
+        selSize = jumpBtn.dataset.size;
+        switchTab('search');
+        renderStepBar('stepBar4', 4);
+        renderResult();
+        showScreen('screenResult');
+        document.getElementById('navSearch').classList.add('active');
+        document.getElementById('navReverse').classList.remove('active');
+      });
+      resultList.appendChild(card);
+    });
+
+    if (matches.length > 50) {
+      const note = document.createElement('div');
+      note.style.cssText = 'text-align:center;padding:8px;font-size:0.8rem;color:var(--text-sub)';
+      note.textContent = `他 ${matches.length - 50} 件あります（キーワードを絞り込んでください）`;
+      resultList.appendChild(note);
+    }
+  }
+
+  // ── 同期 ──
+  function syncData() {
+    showToast('デモ版のため、同期機能は無効です');
+  }
+
+  // ── XSS対策ユーティリティ ──
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // ── トースト ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('show'), 3000);
+  }
+</script>
+</body>
+</html>
