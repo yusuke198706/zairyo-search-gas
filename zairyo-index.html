@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    .entry {
+      margin-bottom: 10px;
+    }
+    .entry select, .entry input, .entry button {
+      margin-right: 5px;
+    }
+    table {
+      margin-top: 10px;
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 15px;
+      border: 1px solid #ccc;
+    }
+    th, td {
+      padding: 6px 10px;
+      text-align: left;
+      border: 1px solid #ccc;
+    }
+    tr {
+      border-bottom: 1px solid #ccc;
+    }
+    .history-entry {
+      margin-bottom: 15px;
+      padding: 10px;
+      border: 1px solid #aaa;
+      background-color: #f9f9f9;
+    }
+    .history-entry pre {
+      white-space: pre-wrap;
+      margin: 0;
+    }
+    @media print {
+      body { margin: 1cm; font-size: 14pt; }
+      #categorySections, .entry, #historySection, button:not(#printResultsBtn) { display: none !important; }
+      #resultArea, #printArea, table, th, td { display: block !important; }
+      table, th, td { border: 1px solid #000 !important; border-collapse: collapse !important; }
+      tr { border-bottom: 1px solid #000 !important; }
+    }
+  </style>
+</head>
+<body>
+  <h2>材料検索</h2>
+  <div id="categorySections"></div>
+  <br>
+  <button onclick="search()">検索</button>
+  <button id="printResultsBtn" onclick="printResults()">印刷</button>
+  <button onclick="toggleHistory()">履歴を表示</button>
+  <button onclick="downloadCSV()">CSV出力</button>
+
+  <div id="printArea">
+    <div id="resultArea"></div>
+  </div>
+  <div id="historySection" style="display:none;">
+    <h3>検索履歴</h3>
+    <div id="historyList"></div>
+  </div>
+
+  <script>
+    const categories = [
+      { id: "highVoltage", label: "高圧" },
+      { id: "lowVoltage", label: "低圧" },
+      { id: "singlePhase", label: "単相変台" },
+      { id: "lighting", label: "灯動変台" },
+      { id: "overheadGroundWire", label: "架空地線" },
+      { id: "guyWire", label: "支線" },
+    ];
+
+    let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+    let lastResults = {};
+
+    window.onload = () => {
+      const container = document.getElementById("categorySections");
+
+      categories.forEach(cat => {
+        const section = document.createElement("div");
+        section.id = `${cat.id}Section`;
+        section.innerHTML = `<h3>${cat.label}</h3>
+          <div class="entry">
+            <select class="patternSelect"></select>
+            <select class="sizeSelect"></select>
+            <button type="button" onclick="changeQty(this, -1)">－</button>
+            <input type="number" class="qtyInput" min="0" value="0" readonly>
+            <button type="button" onclick="changeQty(this, 1)">＋</button>
+            <button onclick="this.parentElement.remove()">✕</button>
+          </div>
+          <button onclick="addEntry('${section.id}')">＋ 追加</button>
+          <hr>`;
+        container.appendChild(section);
+        fillDropdowns(section.querySelector('.entry'), cat.label);
+      });
+
+      renderHistory();
+    };
+
+    function fillDropdowns(entry, categoryLabel) {
+      google.script.run.withSuccessHandler(options => {
+        const patternSelect = entry.querySelector('.patternSelect');
+        const sizeSelect = entry.querySelector('.sizeSelect');
+        patternSelect.innerHTML = '';
+        sizeSelect.innerHTML = '';
+
+        options.patterns.forEach(pattern => {
+          const opt = document.createElement('option');
+          opt.value = pattern;
+          opt.textContent = pattern;
+          patternSelect.appendChild(opt);
+        });
+
+        options.sizes.forEach(size => {
+          const opt = document.createElement('option');
+          opt.value = size;
+          opt.textContent = size;
+          sizeSelect.appendChild(opt);
+        });
+      }).getDropdownOptionsByCategory(categoryLabel);
+    }
+
+    function sectionIdToLabel(sectionId) {
+      const match = categories.find(cat => `${cat.id}Section` === sectionId);
+      return match ? match.label : '';
+    }
+
+    function addEntry(sectionId) {
+      const section = document.getElementById(sectionId);
+      const entry = document.createElement('div');
+      entry.className = 'entry';
+      entry.innerHTML = `
+        <select class="patternSelect"></select>
+        <select class="sizeSelect"></select>
+        <button type="button" onclick="changeQty(this, -1)">－</button>
+        <input type="number" class="qtyInput" min="0" value="0" readonly>
+        <button type="button" onclick="changeQty(this, 1)">＋</button>
+        <button onclick="this.parentElement.remove()">✕</button>
+      `;
+      const addButton = Array.from(section.querySelectorAll('button')).find(btn => btn.textContent.includes('追加'));
+      section.insertBefore(entry, addButton);
+      fillDropdowns(entry, sectionIdToLabel(sectionId));
+    }
+
+    function changeQty(button, delta) {
+      const input = button.parentElement.querySelector('.qtyInput');
+      let current = parseInt(input.value) || 0;
+      current = Math.max(0, current + delta);
+      input.value = current;
+    }
+
+    function getMaterialGroup(name) {
+      const groups = [
+        { keyword: 'カバー', group: '01_カバー' },
+        { keyword: 'ボルト', group: '02_ボルト' },
+        { keyword: 'バンド', group: '03_バンド' },
+        { keyword: 'タイ', group: '04_タイ' },
+        { keyword: 'アーム', group: '05_アーム' },
+        { keyword: 'ストラップ', group: '06_ストラップ' },
+        { keyword: '碍子', group: '07_碍子' },
+      ];
+      for (const item of groups) {
+        if (name.includes(item.keyword)) return item.group;
+      }
+      return '99_その他';
+    }
+
+    function search() {
+      const allInputs = categories.map(cat => {
+        const entries = document.querySelectorAll(`#${cat.id}Section .entry`);
+        const patterns = [], sizes = [], quantities = [];
+        entries.forEach(entry => {
+          const qty = parseInt(entry.querySelector('.qtyInput').value);
+          if (qty > 0) {
+            patterns.push(entry.querySelector('.patternSelect').value);
+            sizes.push(entry.querySelector('.sizeSelect').value);
+            quantities.push(qty);
+          }
+        });
+        return [patterns, sizes, quantities];
+      });
+
+      const inputSnapshot = allInputs.map(([p, s, q]) =>
+        p.map((pattern, i) => `${pattern} (${s[i]}) ×${q[i]}`)
+      ).flat();
+      const timestamp = new Date().toLocaleString();
+
+      google.script.run.withSuccessHandler(results => {
+        displayResults(results);
+        logHistory(inputSnapshot, results, timestamp);
+      }).searchMaterials(...allInputs.flat());
+    }
+
+    function displayResults(results) {
+      const resultArea = document.getElementById('resultArea');
+      resultArea.innerHTML = "<h3>検索結果</h3>";
+
+      if (Object.keys(results).length === 0) {
+        resultArea.innerHTML += "<p>該当する材料がありませんでした。</p>";
+        return;
+      }
+
+      lastResults = results;
+
+      const table = document.createElement('table');
+      const headerRow = document.createElement('tr');
+      ['材料名', '個数', 'チェック', '材料名', '個数', 'チェック'].forEach(text => {
+        const th = document.createElement('th');
+        th.textContent = text;
+        headerRow.appendChild(th);
+      });
+      table.appendChild(headerRow);
+
+      const keys = Object.keys(results).sort((a, b) => {
+        const groupA = getMaterialGroup(a);
+        const groupB = getMaterialGroup(b);
+        return groupA.localeCompare(groupB, 'ja') || a.localeCompare(b, 'ja');
+      });
+
+      for (let i = 0; i < keys.length; i += 2) {
+        const row = document.createElement('tr');
+        for (let j = 0; j < 2; j++) {
+          const key = keys[i + j];
+          if (key !== undefined) {
+            row.innerHTML += `<td>${key}</td><td>${results[key]}</td><td><input type="checkbox"></td>`;
+          } else {
+            row.innerHTML += `<td></td><td></td><td></td>`;
+          }
+        }
+        table.appendChild(row);
+      }
+
+      resultArea.appendChild(table);
+    }
+
+    function logHistory(inputs, results, timestamp) {
+      const newEntry = { inputs, results, timestamp };
+      searchHistory.push(newEntry);
+      localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const historyList = document.getElementById('historyList');
+      historyList.innerHTML = '';
+
+      searchHistory.forEach((entry, index) => {
+        const div = document.createElement('div');
+        div.className = 'history-entry';
+        div.innerHTML = `
+          <strong>検索${index + 1}（${entry.timestamp}）</strong><br>
+          <strong>検索内容:</strong>
+          <pre>${entry.inputs.join("\n")}</pre>
+          <strong>検索結果:</strong>
+          <pre>${Object.entries(entry.results).map(([k, v]) => `${k} ×${v}`).join("\n")}</pre>
+        `;
+        historyList.appendChild(div);
+      });
+    }
+
+    function toggleHistory() {
+      const section = document.getElementById('historySection');
+      section.style.display = (section.style.display === 'none') ? 'block' : 'none';
+    }
+
+    function printResults() {
+      const content = document.getElementById('printArea').innerHTML;
+      const printWindow = window.open('', '', 'height=600,width=800');
+      printWindow.document.write('<html><head><title>印刷</title></head><body>');
+      printWindow.document.write(content);
+      printWindow.document.write('</body></html>');
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    }
+
+    function downloadCSV() {
+      if (!lastResults || Object.keys(lastResults).length === 0) {
+        alert("出力できる検索結果がありません。");
+        return;
+      }
+
+      let csv = "材料名,数量\n";
+      for (let material in lastResults) {
+        csv += `${material},${lastResults[material]}\n`;
+      }
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `search_result.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>
